@@ -1,0 +1,89 @@
+{
+  "$schema": "https://github.com/hyperledger-labs/fablo/releases/download/1.2.0/schema.json",
+  "global": {
+    "fabricVersion": "2.4.7",
+    "tls": false,
+    "engine": "docker",
+    "peerDevMode": false,
+    "tools": {
+      "explorer": true
+    }
+  },
+  "orgs": [
+    {
+      "organization": {
+        "name": "Orderer",
+        "domain": "orderer.example.com"
+      },
+      "orderers": [
+        {
+          "groupName": "group1",
+          "type": "solo",
+          "instances": 1
+        }
+      ],
+      "tools": {
+        "fabloRest": false
+      }
+    },
+    {
+      "organization": {
+        "name": "Org1",
+        "domain": "org1.example.com"
+      },
+      "peer": {
+        "instances": 2,
+        "db": "LevelDb"
+      },
+      "tools": {
+        "fabloRest": false
+      }
+    },
+    {
+      "organization": {
+        "name": "Org2",
+        "domain": "org2.example.com"
+      },
+      "peer": {
+        "instances": 2,
+        "db": "LevelDb"
+      },
+      "tools": {
+        "fabloRest": false
+      }
+    }
+  ],
+  "channels": [
+    {
+      "name": "access-control-channel",
+      "orgs": [
+        {
+          "name": "Org1",
+          "peers": [
+            "peer0",
+            "peer1"
+          ]
+        },
+        {
+          "name": "Org2",
+          "peers": [
+            "peer0",
+            "peer1"
+          ]
+        }
+      ]
+    }
+  ],
+  "chaincodes": [
+    {
+      "name": "access-control-chaincode",
+      "version": "0.0.1",
+      "lang": "node",
+      "channel": "access-control-channel",
+      "directory": "./chaincodes/access_control",
+      "endorsement": "OR('Org1MSP.member', 'Org2MSP.member')"
+    }
+  ]
+}
+
+
