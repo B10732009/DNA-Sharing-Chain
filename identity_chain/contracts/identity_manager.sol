@@ -5,27 +5,37 @@ import "./identity.sol";
 
 contract IdentityManager {
 	struct User {
+		string userId;
 		address userAddress;
 		address identityAddress;
-		bool exist;
 	}
 	
 	mapping(address => bool) orgList;
 	mapping(address => User) userList;
-
+	mapping(string => bool) userIdList;
+	mapping(address => bool) userAddressList;
+	
 	constructor() {
 		orgList[0xe092b1fa25DF5786D151246E492Eed3d15EA4dAA] = true;
 	}
 
-	function addUser(address _userAddress) public {
+	function addUser(string memory _userId, address _userAddress) public {
 		require(orgList[msg.sender], "only organization administrator can call this function.");
-		require(!userList[_userAddress].exist, "this address has been used.");
+		require(!userIdList[_userId], "this id has been used.");
+		require(!userAddressList[_userAddress], "this address has been used.");
+		userIdList[_userId] = true;
+		userAddressList[_userAddress] = true;
 		Identity identity = new Identity();
-		User memory user = User(_userAddress, address(identity), true);
-		userList[_userAddress] = user;
+		userList[_userAddress] = User(_userId, _userAddress, address(identity));
 	}
 
-	function checkUser(address _userAddress) public view returns(address) {
-		return userList[_userAddress].userAddress;
+	function checkUser(string memory _userId, address _userAddress) public view returns(bool , string memory) {
+		if (userIdList[_userId]) {
+			return (false, "this id has been used.");
+		}
+		if (userAddressList[_userAddress]) {
+			return (false, "this address has been used.");
+		}
+		return (true, "ok");
 	}
 }

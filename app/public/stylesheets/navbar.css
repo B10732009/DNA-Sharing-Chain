@@ -1,0 +1,28 @@
+.navbar {
+    background-color: #5B00AE;
+    overflow: hidden;
+}
+
+.navbar-item {
+    display: block;
+    background-color: #5B00AE;
+    color: #F0F0F0;
+    padding: 14px 16px;
+    text-align: center;
+    text-decoration: none;
+    width: 15%;
+    font-weight: bold;
+}
+
+.navbar-item-left {
+    float: left;
+}
+
+.navbar-item-right {
+    float: right;
+}
+
+.navbar-item:hover {
+    background-color: #D3A4FF;
+    color: #272727;
+}

@@ -10,7 +10,7 @@ async function test() {
 
     try {
         const res1 = await contract.methods
-            .addUser('0xc0d8F541Ab8B71F20c10261818F2F401e8194049')
+            .addUser('F123456789', '0xc0d8F541Ab8B71F20c10261818F2F401e8194049')
             .send({
                 from: '0xe092b1fa25DF5786D151246E492Eed3d15EA4dAA',
                 gas: 2000000,
@@ -21,7 +21,7 @@ async function test() {
         console.log(res1);
 
         const res2 = await contract.methods
-            .checkUser('0xc0d8F541Ab8B71F20c10261818F2F401e8194049')
+            .checkUser('F123456789', '0xc0d8F541Ab8B71F20c10261818F2F401e8194049')
             .call({ from: '0xe092b1fa25DF5786D151246E492Eed3d15EA4dAA' });
         console.log(res2);
     }
