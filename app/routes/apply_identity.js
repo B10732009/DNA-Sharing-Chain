@@ -6,14 +6,17 @@ const { Web3 } = require('web3');
 
 
 router.get('/', function (req, res, next) {
-    // res.sendFile(path.join(__dirname, '..', 'views', 'apply_identity.html'));
-    res.render('apply_identity', { 'title': 'Express' });
+    if (req.query.msg) {
+        res.render('apply_identity', { 'msg': msg });
+    }
+    res.render('apply_identity');
 });
 
 router.post('/', async function (req, res) {
     console.log(req.body.username);
     console.log(req.body.id);
     console.log(req.body.address);
+    console.log(req.body.role)
     try {
         const identityChainConfigPath = path.join(__dirname, '..', '..', 'config', 'identity_chain_config.json');
         const identityChainConfig = JSON.parse(fs.readFileSync(identityChainConfigPath));
@@ -28,11 +31,11 @@ router.post('/', async function (req, res) {
 
         if (!checkUserResult['0']) {
             console.log(`Fail to generate new idenity: ${checkUserResult['1']}`);
-            res.redirect('/apply_identity');
+            res.redirect('/apply_identity?');
         }
         else {
             const addUserResult = await contract.methods
-                .addUser(req.body.id, req.body.address)
+                .addUser(req.body.id, req.body.address, req.body.role)
                 .send({
                     from: identityChainConfig.orgs.identity_chain.address,
                     gas: 2000000,

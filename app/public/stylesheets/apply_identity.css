@@ -52,3 +52,7 @@ body {
     background-color: #FFA042;
     color: #272727;
 }
+
+.form div {
+    padding: 10px;
+}
