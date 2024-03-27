@@ -32,8 +32,8 @@
         "domain": "org1.example.com"
       },
       "peer": {
-        "instances": 2,
-        "db": "LevelDb"
+        "instances": 1,
+        "db": "CouchDb"
       },
       "tools": {
         "fabloRest": false
@@ -45,8 +45,8 @@
         "domain": "org2.example.com"
       },
       "peer": {
-        "instances": 2,
-        "db": "LevelDb"
+        "instances": 1,
+        "db": "CouchDb"
       },
       "tools": {
         "fabloRest": false
@@ -60,15 +60,13 @@
         {
           "name": "Org1",
           "peers": [
-            "peer0",
-            "peer1"
+            "peer0"
           ]
         },
         {
           "name": "Org2",
           "peers": [
-            "peer0",
-            "peer1"
+            "peer0"
           ]
         }
       ]
@@ -85,5 +83,3 @@
     }
   ]
 }
-
-

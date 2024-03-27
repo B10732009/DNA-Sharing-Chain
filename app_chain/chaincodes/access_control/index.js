@@ -12,13 +12,17 @@ class AccessControlContract extends Contract {
         // function that will be invoked on chaincode instantiation
     }
 
-    async addUser(userAddress, role) {
-        
+    async addUser(ctx, userAddress, role) {
+        const type = ctx.ClientIdentity.getAttributeValue("hf.Type");
+        console.log(type);
     }
 
     async put(ctx, key, value) {
+        const type = ctx.clientIdentity.getAttributeValue("hf.Type");
+        console.log(type);
+        
         await ctx.stub.putState(key, Buffer.from(value));
-        return { success: "OK" };
+        return { success: "OK", type: type };
     }
 
     async get(ctx, key) {
