@@ -1,28 +1,23 @@
-let express = require('express');
-let router = express.Router();
-let path = require('path');
-let fs = require('fs');
-const { Web3 } = require('web3');
-
-
-router.get('/', function (req, res, next) {
-    if (req.query.msg) {
-        res.render('apply_identity', { 'msg': msg });
-    }
-    res.render('apply_identity');
-});
-
-router.post('/', async function (req, res) {
-    console.log(req.body.username);
-    console.log(req.body.id);
-    console.log(req.body.address);
-    console.log(req.body.role)
+async function uploadData() {
     try {
-        const identityChainConfigPath = path.join(__dirname, '..', '..', 'config', 'identity_chain_config.json');
-        const identityChainConfig = JSON.parse(fs.readFileSync(identityChainConfigPath));
-        const contractAbiPath = path.join(__dirname, '..', '..', 'identity_chain', 'build', 'contracts', 'IdentityManager.json')
-        const contractAbi = JSON.parse(fs.readFileSync(contractAbiPath)).abi;
 
+    }
+    catch {
+
+    }
+}
+
+async function downloadData() {
+    try {
+
+    }
+    catch {
+        
+    }
+}
+
+async function main() {
+    try {
         const web3 = new Web3(identityChainConfig.url);
         const contract = new web3.eth.Contract(contractAbi, identityChainConfig.contracts.identity_manager.address);
         const checkUserResult = await contract.methods
@@ -52,6 +47,6 @@ router.post('/', async function (req, res) {
     catch (error) {
         console.log(error);
     }
-});
+}
 
-module.exports = router;
+main();

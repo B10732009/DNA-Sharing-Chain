@@ -1,6 +1,10 @@
 const fs = require('fs');
 const path = require('path');
 
+for (const arg  of process.argv.slice(2)) {
+    console.log(arg);
+}
+
 const abiFileDir = path.join(__dirname, 'build', 'contracts');
 const abiFileList = fs.readdirSync(abiFileDir);
 
