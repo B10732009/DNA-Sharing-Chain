@@ -10,6 +10,8 @@ contract IdentityManager {
 		uint userRole;
 		bool exist;
 	}
+
+	event Result(bool _status, string _msg);
 	
 	mapping(address => bool) orgList;
 	mapping(address => User) userList; // user address => user infos
@@ -20,13 +22,30 @@ contract IdentityManager {
 	}
 
 	function addUser(string memory _userId, address _userAddress, uint _role) public {
-		require(orgList[msg.sender], "only organization administrator can call this function.");
-		require(!userIdList[_userId], "this id has been used.");
-		require(!userList[_userAddress].exist, "this address has been used.");
-		require(_role <= 4, "role should between 0 ~ 4.");
+		// require(orgList[msg.sender], "only organization administrator can call this function.");
+		// require(!userIdList[_userId], "this id has been used.");
+		// require(!userList[_userAddress].exist, "this address has been used.");
+		// require(_role <= 4, "role should between 0 ~ 4.");
+		if (!orgList[msg.sender]) {
+			emit Result(false, "only organization administrator can call this function.");
+			return;
+		}
+		if (userIdList[_userId]) {
+			emit Result(false, "this id has been used.");
+			return;
+		}
+		if (userList[_userAddress].exist) {
+			emit Result(false, "this address has been used.");
+			return;
+		}
+		if (_role > 4) {
+			emit Result(false, "user role sould between 0 ~ 4.");
+			return;
+		}
 		userIdList[_userId] = true;
 		Identity identity = new Identity(_userAddress);
 		userList[_userAddress] = User(_userId, address(identity), _role, true);
+		emit Result(true, "ok.");
 	}
 
 	function checkUser(string memory _userId, address _userAddress, uint _role) public view returns(bool , string memory) {
