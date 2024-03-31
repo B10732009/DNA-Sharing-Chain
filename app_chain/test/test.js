@@ -155,10 +155,22 @@ async function main() {
 			// Get the contract from the network.
 			const contract = network.getContract(chaincodeName);
 			// Test chaincodes
-			const a = await contract.submitTransaction('put', 'aasa', 'bbb');
+			const a = await contract.submitTransaction('put', 'aaa', 'bbb');
 			console.log(a.toString());
-			const b = await contract.submitTransaction('get', 'aasa');
+			const b = await contract.evaluateTransaction('get', 'aaa');
 			console.log(b.toString());
+
+			const temp = await contract.submitTransaction('put', 'abc', JSON.stringify({
+				name: 'abc',
+				id: 'def'
+			}));
+			console.log(temp.toString());
+			const temp2 = await contract.evaluateTransaction('query', JSON.stringify({
+				selector: {
+					id: 'def'
+				}
+			}));
+			console.log(temp2.toString());
 		} finally {
 			// Disconnect from the gateway when the application is closing
 			// This will close all connections to the network

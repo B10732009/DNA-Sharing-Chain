@@ -1,36 +1,44 @@
 'use strict';
 
-const { Contract } = require("fabric-contract-api");
-// const crypto = require("crypto");
+const { Contract } = require('fabric-contract-api');
 
 class AccessControlContract extends Contract {
     constructor() {
-        super("AccessControlContract");
+        super('AccessControlContract');
     }
 
     async instantiate() {
         // function that will be invoked on chaincode instantiation
     }
 
-    async addUser(ctx, userAddress, role) {
-        const type = ctx.ClientIdentity.getAttributeValue("hf.Type");
-        console.log(type);
-    }
-
     async put(ctx, key, value) {
-        const type = ctx.clientIdentity.getAttributeValue("hf.Type");
-        console.log(type);
-        
         await ctx.stub.putState(key, Buffer.from(value));
-        return { success: "OK", type: type };
+        return { success: 'OK' };
     }
 
     async get(ctx, key) {
         const buffer = await ctx.stub.getState(key);
         if (!buffer || !buffer.length) {
-            return { error: "NOT_FOUND" };
+            return { error: 'NOT_FOUND' };
         }
-        return { success: buffer.toString() };
+        return { success: 'OK', data: buffer.toString() };
+    }
+
+    async query(ctx, queryString) {
+        let queryIterator = await ctx.stub.getQueryResult(queryString);
+        let queryResults = [];
+        let iterator = await queryIterator.next();
+        while (!iterator.done) {
+            if (iterator.value) {
+                queryResults.push({
+                    key: iterator.value.key.toString('utf8'),
+                    value: JSON.parse(iterator.value.value.toString('utf8'))
+                });
+            }
+            iterator = await queryIterator.next();
+        }
+        queryIterator.close();
+        return { success: 'OK', data: queryResults };
     }
 
     // async putPrivateMessage(ctx, collection) {
