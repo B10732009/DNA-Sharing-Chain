@@ -48,17 +48,8 @@ contract IdentityManager {
 		emit Result(true, "ok.");
 	}
 
-	function checkUser(string memory _userId, address _userAddress, uint _role) public view returns(bool , string memory) {
-		if (userIdList[_userId]) {
-			return (false, "this id has been used.");
-		}
-		if (userList[_userAddress].exist) {
-			return (false, "this address has been used.");
-		}
-		if (_role > 4) {
-			return (false, "role should between 0 ~ 4.");
-		}
-		return (true, "ok");
+	function checkUser(address _userAddress) public view returns(bool) {
+		return userList[_userAddress].exist;
 	}
 
 	function getUserId(address _userAddress) public view returns(string memory) {
