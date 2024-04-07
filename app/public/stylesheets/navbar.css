@@ -1,17 +1,20 @@
 .navbar {
-    background-color: #5B00AE;
+    background-color: #154560;
     overflow: hidden;
 }
 
 .navbar-item {
     display: block;
-    background-color: #5B00AE;
+    background-color: #154560;
     color: #F0F0F0;
     padding: 14px 16px;
+    margin: 10px;
     text-align: center;
     text-decoration: none;
     width: 15%;
     font-weight: bold;
+    border: 1px solid #BEC3C9;
+    border-radius: 25px;
 }
 
 .navbar-item-left {
@@ -23,6 +26,7 @@
 }
 
 .navbar-item:hover {
-    background-color: #D3A4FF;
-    color: #272727;
+    background-color: #126FA5;
+    /* transition: background-color 1000ms linear; */
+    /* color: #272727; */
 }

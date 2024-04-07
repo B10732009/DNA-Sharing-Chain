@@ -3,10 +3,11 @@
     margin: 0 auto;
     margin-top: 100px;
     padding: 20px;
-    border: 1px solid #CCCCCC;
+    border: 1px solid #F0F0F0;
     border-radius: 30px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    background-color: #F0F0F0;
+    background-color: #282A36;
+    color: #F0F0F0;
     text-align: center;
 }
 
@@ -19,8 +20,11 @@
     width: 80%;
     padding: 10px;
     margin: 10px 0;
-    border: 1px solid #CCCCCC;
+    border: 1px solid #F0F0F0;
     border-radius: 5px;
+    background-color: #272727;
+    color: #F0F0F0;
+
 }
 
 .form input[type="submit"],
@@ -35,28 +39,29 @@
 }
 
 .form select {
-    border: 1px solid #CCCCCC;
-    background-color: #FFFFFF;
+    border: 1px solid #F0F0F0;
+    background-color: #272727;
+    color: #F0F0F0;
 }
 
 .form input[type="submit"] {
-    background-color: #5B00AE;
+    background-color: #154560;
     color: #F0F0F0;
 }
 
 .form input[type="submit"]:hover {
-    background-color: #D3A4FF;
-    color: #272727;
+    background-color: #126FA5;
+    /* color: #272727; */
 }
 
 .form button {
-    background-color: #EA7500;
-    color: #F0F0F0; 
+    background-color: #9E461A;
+    color: #F0F0F0;
 }
 
 .form button:hover {
-    background-color: #FFA042;
-    color: #272727;
+    background-color: #C1551F;
+    /* color: #272727; */
 }
 
 .form div {
