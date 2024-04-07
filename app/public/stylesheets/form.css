@@ -4,8 +4,9 @@
     margin-top: 100px;
     padding: 20px;
     border: 1px solid #CCCCCC;
-    border-radius: 5px;
+    border-radius: 30px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    background-color: #F0F0F0;
     text-align: center;
 }
 
@@ -23,13 +24,22 @@
 }
 
 .form input[type="submit"],
-.form button {
+.form button,
+.form select {
     width: 82%;
     padding: 10px;
     margin: 10px 0;
     border: none;
     border-radius: 5px;
     cursor: pointer;
+}
+
+.form select {
+    border: 1px solid #CCCCCC;
+    background-color: #FFFFFF;
+}
+
+.form input[type="submit"] {
     background-color: #5B00AE;
     color: #F0F0F0;
 }
@@ -41,6 +51,7 @@
 
 .form button {
     background-color: #EA7500;
+    color: #F0F0F0; 
 }
 
 .form button:hover {
@@ -53,6 +64,6 @@
 }
 
 .form label {
-    width: 15%;
-    padding: 10px;
+    width: 30%;
+    margin-right: 30px;
 }

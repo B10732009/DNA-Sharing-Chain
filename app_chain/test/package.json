@@ -4,12 +4,14 @@
   "description": "",
   "main": "test.js",
   "scripts": {
-    "test": "node test.js"
+    "test": "node test_offline.js"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "fabric-ca-client": "^2.2.19",
-    "fabric-network": "^2.2.19"
+    "fabric-network": "^2.2.19",
+    "fabric-common": "^2.2.17",
+    "elliptic": "^6.5.4"
   }
 }

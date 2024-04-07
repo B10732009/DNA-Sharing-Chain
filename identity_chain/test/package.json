@@ -12,6 +12,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "web3": "^4.6.0"
+    "web3": "^4.6.0",
+    "eth-sig-util": "^3.0.1"
   }
 }

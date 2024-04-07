@@ -67,4 +67,8 @@ contract IdentityManager {
 	function getUserExist(address _userAddress) public view returns(bool) {
 		return userList[_userAddress].exist;
 	}
+
+	function verify(bytes32 _hashedMsg, uint8 _v, bytes32 _r, bytes32 _s) public pure returns(address) {
+		return ecrecover(_hashedMsg, _v, _r, _s);
+	}
 }

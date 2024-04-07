@@ -2,6 +2,8 @@
 pragma solidity ^0.8.13;
 
 contract Identity {
+	event IdentityResult(bool _status, string _msg);
+	
 	address owner;
 	mapping(string => string) data;
 
@@ -9,16 +11,22 @@ contract Identity {
 		owner = _owner;
 	}
 
-	function isOwner(address _userAddress) public view returns(bool) {
-		return owner == _userAddress;
+	function verifySignature(bytes32 _hashedMsg, uint8 _v, bytes32 _r, bytes32 _s) public view returns(bool) {
+		return ecrecover(_hashedMsg, _v, _r, _s) == owner;
 	}
 
-	function addData(string memory _name, string memory _data) public {
-		require(owner == msg.sender, "only owner can add data.");
+	function addData(string memory _name, string memory _data, bytes32 _hashedMsg, uint8 _v, bytes32 _r, bytes32 _s) public {
+		if (!verifySignature(_hashedMsg, _v, _r, _s)) {
+			emit IdentityResult(false, "only owner can add data.");
+		}
 		data[_name] = _data;
+		emit IdentityResult(true, "ok.");
 	}
 
-	function getData(string memory _name) public view returns(string memory) {
+	function getData(string memory _name, bytes32 _hashedMsg, uint8 _v, bytes32 _r, bytes32 _s) public view returns(string memory) {
+		if (!verifySignature(_hashedMsg, _v, _r, _s)) {
+			return "(error)";
+		}
 		return data[_name];
 	}
 }

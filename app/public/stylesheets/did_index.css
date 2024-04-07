@@ -1,0 +1,20 @@
+.homepage-div {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+.homepage-button {
+    display: block;
+    width: 40%;
+    padding: 30px;
+    margin: 30px 0;
+    border: 1px solid #CCCCCC;
+    border-radius: 5px;
+    background-color: #007979;
+    color: #F0F0F0;
+    font-weight: bold;
+    text-decoration: none;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
