@@ -15,6 +15,7 @@ function _ganache() {
 function _truffle() {
     cd ${IDENTITY_CHAIN_DIR}
     truffle migrate --reset
+    node retrieve_abi.js
 }
 
 function _app() {

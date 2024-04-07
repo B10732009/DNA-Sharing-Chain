@@ -6,6 +6,7 @@ for (const arg  of process.argv.slice(2)) {
 }
 
 const abiFileDir = path.join(__dirname, 'build', 'contracts');
+const newAbiFileDir = path.join(__dirname, '..', 'app', 'public', 'javascripts');
 const abiFileList = fs.readdirSync(abiFileDir);
 
 for (const abiFile of abiFileList) {
@@ -16,5 +17,5 @@ for (const abiFile of abiFileList) {
     const newAbiName = abiFile.slice(0, -5);
     const newAbiFileName = `${newAbiName}.abi.js`;
     const content = `const ${newAbiName}Abi = ${JSON.stringify(abi)};`;
-    fs.writeFileSync(path.join(abiFileDir, newAbiFileName), content);
+    fs.writeFileSync(path.join(newAbiFileDir, newAbiFileName), content);
 }
