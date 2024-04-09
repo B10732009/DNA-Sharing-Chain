@@ -155,8 +155,8 @@ async function main() {
 			// Get the contract from the network.
 			const contract = network.getContract(chaincodeName);
 			// Test chaincodes
-			const a = await contract.submitTransaction('put', 'aaa', 'bbb');
-			console.log(a.toString());
+			// const a = await contract.submitTransaction('put', 'aaa', 'bbb');
+			// console.log(a.toString());
 			const b = await contract.evaluateTransaction('get', 'aaa');
 			console.log(b.toString());
 

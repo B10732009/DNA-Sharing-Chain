@@ -9,6 +9,7 @@ let applyIdentityRouter = require('./routes/apply_identity');
 let manageIdentityRouter = require('./routes/manage_identity');
 let registerRouter = require('./routes/register');
 let didRouter = require('./routes/did');
+let appRouter = require('./routes/app');
 
 let app = express();
 
@@ -26,6 +27,7 @@ app.use('/', indexRouter);
 app.use('/apply_identity', applyIdentityRouter);
 app.use('/manage_identity', manageIdentityRouter);
 app.use('/register', registerRouter);
+app.use('/app', appRouter);
 app.use('/did', didRouter);
 
 // catch 404 and forward to error handler
