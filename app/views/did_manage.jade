@@ -27,14 +27,14 @@ body
     p Upload Encrypted Data
     form(action='/did/manage' method='post')
       input#upload-encrypted-data-name(type='text' name='name' placeholder='name' required='')
-      input#upload-encrypted-data-data(type='text' name='id' placeholder='data' required='')
-      input(type='submit' name='upload' value='upload' onclick='uploadEncryptedData(); return false;')
+      input#upload-encrypted-data-data(type='file' name='data' placeholder='data' required='')
+      input(type='submit' name='upload' value='encrypt & upload' onclick='uploadEncryptedData(); return false;')
   .form
     p Download Encrypted Data
     form(action='/did/manage' method='post')
       input#download-encrypted-data-name(type='text' name='name' placeholder='name' required='')
-      input#download-encrypted-data-data(type='text' name='id' placeholder='data' required='')
-      input(type='submit' name='download' value='download' onclick='downloadEncryptedData(); return false;')
+      input#download-encrypted-data-data(type='text' name='data' placeholder='data' required='')
+      input(type='submit' name='download' value='download & decrypt' onclick='downloadEncryptedData(); return false;')
   br
   br
   br 

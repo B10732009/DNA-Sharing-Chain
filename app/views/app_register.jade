@@ -8,18 +8,21 @@ head
   title DID SYSTEM
   script(src='../javascripts/web3.bundle.js')
   script(src='../javascripts/app_register.js')
-.navbar
-  a.navbar-item.navbar-item-left(href='/did/index') DNA SYSTEM
-  a.navbar-item.navbar-item-right(href='/did/manage') Manage
-  a.navbar-item.navbar-item-right(href='/did/register') Register
-.form
-  p Register with Metamask
-  form(action='/app/register' method='post')
-    //- input#id(type='text' name='id' placeholder='id number' required='')
-    input#address(type='text' name='address' placeholder='address' hidden readonly='')
-    input#signature(type='text' name='signature' placeholder='signature' required readonly='')
-    button(type='button' onclick='getMetamaskAccount(); signWithMetamask();') sign message with metamask account
-    input(type='submit' name='register' value='register' onclick='return true;')
-.form
-  form(action='/app/test' method='post')
-    input(type='submit' name='register' value='register' onclick='return true;')
+body
+  .navbar
+    a.navbar-item.navbar-item-left(href='/did/index') DNA SYSTEM
+    a.navbar-item.navbar-item-right(href='/did/manage') Manage
+    a.navbar-item.navbar-item-right(href='/did/register') Register
+  .form
+    p Register
+    form(action='/app/register' method='post')
+      input#address(type='text' name='address' placeholder='address' hidden readonly='')
+      input#message(type='text' name='message' placeholder='message' readonly='')
+      input#signature(type='text' name='signature' placeholder='signature' required readonly='')
+      button(type='button' onclick='getMetamaskAccount(); signWithMetamask();') sign message with metamask account
+      br
+      br
+      input(type='submit' name='register' value='register' onclick='return true;')
+  .form
+    form(action='/app/test' method='post')
+      input(type='submit' name='register' value='register' onclick='return true;')
