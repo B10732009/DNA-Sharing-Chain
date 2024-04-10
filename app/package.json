@@ -19,7 +19,8 @@
     "fabric-common": "^2.2.17",
     "elliptic": "^6.5.4",
     "openssl-nodejs": "^1.0.5",
-    "jsrsasign": "^10.5.27"
+    "jsrsasign": "^10.5.27",
+    "eth-sig-util": "^3.0.1"
   },
   "devDependencies": {
     "nodemon": "^3.1.0"

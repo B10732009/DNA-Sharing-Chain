@@ -1,17 +1,16 @@
 async function getMetamaskAccount() {
     if (typeof window.ethereum !== 'undefined') {
-        const web3 = new Web3(window.ethereum);
         try {
-            await window.ethereum.request({ method: 'eth_requestAccounts' });
-            const accounts = await web3.eth.getAccounts();
-            document.getElementById('address').value = accounts[0];
+            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+            const account = accounts[0];
+            document.getElementById('address').value = account;
         }
         catch (error) {
-            console.error('Error connecting to MetaMask:', error);
+            console.log(error);
         }
     }
     else {
-        console.error('MetaMask is not installed');
+        console.log('MetaMask is not installed');
     }
 }
 

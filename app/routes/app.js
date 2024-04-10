@@ -4,11 +4,13 @@ let path = require('path');
 let fs = require('fs');
 let crypto = require('crypto');
 let elliptic = require('elliptic');
+const EthSigUtil = require('eth-sig-util');
 const { KEYUTIL } = require('jsrsasign');
 const { Web3 } = require('web3');
 const { Gateway, Wallets } = require('fabric-network');
 const FabricCaServices = require('fabric-ca-client');
 const FabricCommon = require('fabric-common');
+const DID_CONFIG = require('../public/javascripts/did_config');
 
 function buildCcp(_ccpPath) {
     if (!fs.existsSync(_ccpPath)) {
@@ -256,25 +258,37 @@ router.post('/test', async function (req, res) {
 });
 
 router.post('/register', async function (req, res) {
-    const signature = req.body.signature;
     const address = req.body.address;
-    console.log(signature);
+    const message = req.body.message;
+    const signature = req.body.signature;
+    const appEncryptedCsr = req.body.app_encrypted_csr;
     console.log(address);
+    console.log(message);
+    console.log(signature);
+    console.log(appEncryptedCsr);
     try {
-        const identityChainConfigPath = path.join(__dirname, '..', '..', 'config', 'identity_chain_config.json');
-        const identityChainConfig = JSON.parse(fs.readFileSync(identityChainConfigPath));
-        const web3 = new Web3(identityChainConfig.url);
-        const msg = '[APP SYSTEM] Sign this message to request creating account.';
-        // const recoveredAddress = web3.eth.accounts.recover(msg, signature);
-        // if (recoveredAddress != address) {
-        //     console.log("fail to verify the signature.");
-        //     res.redirect('/app/register');
-        // }
+        // const identityChainConfigPath = path.join(__dirname, '..', '..', 'config', 'identity_chain_config.json');
+        // const identityChainConfig = JSON.parse(fs.readFileSync(identityChainConfigPath));
+
+        // verify signature
+        const web3 = new Web3(DID_CONFIG.URL);
+        const recoveredAddress = web3.eth.accounts.recover(message, signature);
+        if (recoveredAddress.toLowerCase() != address.toLowerCase()) {
+            console.log("Fail to verify the signature.");
+            console.log(recoveredAddress, address);
+            res.redirect('/app/register');
+            return;
+        }
         console.log("Successfully verified the signature.");
 
+        // decrypt csr
+        const csr = EthSigUtil.decrypt(JSON.parse(appEncryptedCsr), DID_CONFIG.ORG.PRVKEY);
+        console.log(csr);
+
+        // register a new user with provided csr
         const adminUser = await getAdminIdentity(caClient, wallet);
         const secret = await caClient.register({
-            affiliation: null, // affiliation,
+            affiliation: null,
             attrs: [{
                 name: 'category',
                 value: 'ghwoghgoqghoghghoghsglahsagh',
@@ -283,7 +297,7 @@ router.post('/register', async function (req, res) {
             enrollmentID: 'www.test.com.tw',
             role: 'client'
         }, adminUser);
-        const csr = fs.readFileSync(path.join(__dirname, 'key.csr'));
+        
         const enrollment = await caClient.enroll({
             enrollmentID: 'www.test.com.tw',
             enrollmentSecret: secret,
@@ -292,14 +306,12 @@ router.post('/register', async function (req, res) {
         const x509Identity = {
             credentials: {
                 certificate: enrollment.certificate,
-                // privateKey: enrollment.key.toBytes(),
             },
             mspId: mspOrg1,
             type: 'X.509',
         };
-        // address = 'ghwoghgoqghoghghoghsglahsagh';
-        await wallet.put('ghwoghgoqghoghghoghsglahsagh', x509Identity);
-        console.log('abc');
+        await wallet.put(address, x509Identity);
+        console.log('Successfully create new user in the wallet');
         res.redirect('/app/index');
     }
     catch (error) {
