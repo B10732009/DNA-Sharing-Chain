@@ -334,6 +334,15 @@ router.post('/register', async function (req, res) {
     }
 });
 
+router.get('/manage', function (req, res, next) {
+    res.render('app_manage');
+});
+
+router.post('/manage', async function (req, res) {
+    createTransaction('0x3e014e5c311a7d6f652ca4f8bb016f4338a44118', wallet, FabricCommon);
+    res.redirect('/app/index');
+});
+
 module.exports = router;
 
 // openssl ecparam -name prime256v1 -genkey -noout -out key.pem

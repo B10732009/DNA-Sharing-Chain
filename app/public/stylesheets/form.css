@@ -28,6 +28,21 @@
 
 }
 
+table {
+    width: 100%;
+    text-align: center;
+}
+
+tr {
+    width: 20%;
+}
+
+th, td {
+    width: 20%;
+}
+
+
+
 .form input[type="submit"],
 .form button,
 .form select {

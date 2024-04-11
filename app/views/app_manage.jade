@@ -1,0 +1,43 @@
+doctype html
+html(lang='en')
+  head
+    meta(charset='UTF-8')
+    meta(name='viewport' content='width=device-width, initial-scale=1.0')
+    link(rel='stylesheet' type='text/css' href='../stylesheets/body.css')
+    link(rel='stylesheet' type='text/css' href='../stylesheets/navbar.css')
+    link(rel='stylesheet' type='text/css' href='../stylesheets/form.css')
+    title DNASSSYSTEM
+    script(src='../javascripts/web3.bundle.js')
+    script(src='../javascripts/eth_sig_util.bundle.js')
+    
+    script(src='../javascripts/IdentityManager.abi.js')
+    script(src='../javascripts/Identity.abi.js')
+    script(src='../javascripts/did_config.js')
+  body
+    .navbar
+      a.navbar-item.navbar-item-left(href='/app') DNA SYSTEM
+      a.navbar-item.navbar-item-right(href='/app/manage') Manage
+      a.navbar-item.navbar-item-right(href='/app/register') Register
+
+    .form
+      p Edit
+      table
+        thead
+          tr
+            th #CHROM
+            th PRIVATE
+            th RESTRIC I
+            th RESTRIC II
+            th PUBLIC
+          tr
+        tbody#tbody
+          //- td #CHR1
+          //- td
+          //-   input(type='submit' name='register' value='register' onclick='return true;')
+          //- td
+          //-   input(type='submit' name='register' value='register' onclick='return true;')
+          //- td
+          //-   input(type='submit' name='register' value='register' onclick='return true;')
+          //- td
+          //-   input(type='submit' name='register' value='register' onclick='return true;')
+  script(src='../javascripts/app_manage.js')
