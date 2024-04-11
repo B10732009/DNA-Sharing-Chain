@@ -78,8 +78,9 @@ async function provideCsr() {
             console.log('csr =', csr);
 
             // encrypt csr with DNASSYSTEM's public key
-            const appEncryptedCsr = EthSigUtil.encrypt('j+RKu+f3B47jMOrftObdXGcsFEME0LLZYwS3SbbTQGI=', { data: csr }, 'x25519-xsalsa20-poly1305');
-            document.getElementById('app_encrypted_csr').value = JSON.stringify(appEncryptedCsr);
+            const appEncryptedCsr = EthSigUtil.encrypt(DID_CONFIG.ORG.PUBKEY, { data: csr }, 'x25519-xsalsa20-poly1305');
+            const appEncryptedCsrString = JSON.stringify(appEncryptedCsr);
+            document.getElementById('app_encrypted_csr').value = appEncryptedCsrString;
         }
         catch (error) {
             console.log(error);

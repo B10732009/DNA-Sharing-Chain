@@ -11,6 +11,7 @@ const { Gateway, Wallets } = require('fabric-network');
 const FabricCaServices = require('fabric-ca-client');
 const FabricCommon = require('fabric-common');
 const DID_CONFIG = require('../public/javascripts/did_config');
+const openssl = require('openssl-nodejs');
 
 function buildCcp(_ccpPath) {
     if (!fs.existsSync(_ccpPath)) {
@@ -187,7 +188,7 @@ async function createTransaction(_userName, _wallet, _fabricCommon) {
     // let user = new _fabricCommon.User(_userName);
     // user._cryptoSuite = cryptoSuite;
     // user._identity = identity;
-    
+
     console.log(user);
     let userContext = gateway.client.newIdentityContext(user);
     // userContext.client.mspid = mspOrg1;
@@ -207,7 +208,7 @@ async function createTransaction(_userName, _wallet, _fabricCommon) {
     const ecdsa = new elliptic.ec(elliptic.curves['p256']);
     const temp = fs.readFileSync(path.join(__dirname, 'key.pem'), 'utf8');
     console.log(temp);
-    const {prvKeyHex}  = KEYUTIL.getKey(temp);
+    const { prvKeyHex } = KEYUTIL.getKey(temp);
     console.log(prvKeyHex);
     const signKey = ecdsa.keyFromPrivate(prvKeyHex, 'hex');
     const signature = ecdsa.sign(Buffer.from(hash, 'hex'), signKey, { canonical: true });
@@ -238,6 +239,14 @@ async function createTransaction(_userName, _wallet, _fabricCommon) {
     console.log(commitResponse);
 }
 
+async function decodeCsr(csr) {
+    return new Promise(function (resolve, reject) {
+        openssl(['req', '-text', '-in', { name: 'key.csr', buffer: Buffer.from(csr) }, '-pubkey'], function (error, buffer) {
+            resolve(buffer.toString());
+        });
+    });
+}
+
 /* GET home page. */
 router.get('/index', function (req, res, next) {
     res.render('app_index', { title: 'Express' });
@@ -253,7 +262,7 @@ router.get('/register', function (req, res, next) {
 });
 
 router.post('/test', async function (req, res) {
-    createTransaction('ghwoghgoqghoghghoghsglahsagh', wallet, FabricCommon);
+    createTransaction('0x3e014e5c311a7d6f652ca4f8bb016f4338a44118', wallet, FabricCommon);
     res.redirect('/app/index');
 });
 
@@ -285,6 +294,12 @@ router.post('/register', async function (req, res) {
         const csr = EthSigUtil.decrypt(JSON.parse(appEncryptedCsr), DID_CONFIG.ORG.PRVKEY);
         console.log(csr);
 
+        // decode csr and retrieve common name
+        const decodedCsr = await decodeCsr(csr);
+        const decodeCsrMatches = decodedCsr.match(/CN\s*=\s*([^\n]+)/);
+        const cn = decodeCsrMatches[1];
+        console.log('cn =', cn);
+
         // register a new user with provided csr
         const adminUser = await getAdminIdentity(caClient, wallet);
         const secret = await caClient.register({
@@ -294,12 +309,12 @@ router.post('/register', async function (req, res) {
                 value: 'ghwoghgoqghoghghoghsglahsagh',
                 ecert: true
             }],
-            enrollmentID: 'www.test.com.tw',
+            enrollmentID: cn,
             role: 'client'
         }, adminUser);
-        
+
         const enrollment = await caClient.enroll({
-            enrollmentID: 'www.test.com.tw',
+            enrollmentID: cn,
             enrollmentSecret: secret,
             csr: csr.toString('utf8')
         });

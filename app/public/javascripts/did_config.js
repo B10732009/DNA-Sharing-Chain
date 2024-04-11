@@ -12,4 +12,7 @@ const DID_CONFIG = {
     }
 };
 
-module.exports = DID_CONFIG;
+
+if (module && module.exports) {
+    module.exports = DID_CONFIG;
+}
