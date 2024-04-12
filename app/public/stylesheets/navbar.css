@@ -1,11 +1,11 @@
 .navbar {
-    background-color: #154560;
+    background-color: #303030;
     overflow: hidden;
 }
 
 .navbar-item {
     display: block;
-    background-color: #154560;
+    background-color: #303030;
     color: #F0F0F0;
     padding: 14px 16px;
     margin: 10px;
@@ -13,8 +13,9 @@
     text-decoration: none;
     width: 15%;
     font-weight: bold;
-    border: 1px solid #BEC3C9;
+    border: 1px solid #303030;
     border-radius: 25px;
+    transition: background-color 0.3s ease;
 }
 
 .navbar-item-left {
@@ -26,7 +27,5 @@
 }
 
 .navbar-item:hover {
-    background-color: #126FA5;
-    /* transition: background-color 1000ms linear; */
-    /* color: #272727; */
+    background-color: #1C1C1C;
 }

@@ -1,36 +1,38 @@
 doctype html
-head
-  meta(charset='UTF-8')
-  meta(name='viewport' content='width=device-width, initial-scale=1.0')
-  link(rel='stylesheet' type='text/css' href='../stylesheets/body.css')
-  link(rel='stylesheet' type='text/css' href='../stylesheets/navbar.css')
-  link(rel='stylesheet' type='text/css' href='../stylesheets/form.css')
-  title DID SYSTEM
-  script(src='../javascripts/web3.bundle.js')
-  script(src='../javascripts/eth_sig_util.bundle.js')
-  script(src='../javascripts/app_register.js')
-  script(src='../javascripts/IdentityManager.abi.js')
-  script(src='../javascripts/Identity.abi.js')
-  script(src='../javascripts/did_config.js')
-body
-  .navbar
-    a.navbar-item.navbar-item-left(href='/did/index') DNA SYSTEM
-    a.navbar-item.navbar-item-right(href='/did/manage') Manage
-    a.navbar-item.navbar-item-right(href='/did/register') Register
-  .form
-    p Register
-    form(action='/app/register' method='post')
-      input#address(type='text' name='address' placeholder='address' hidden readonly='')
-      input#message(type='text' name='message' placeholder='message' value='[DNASSSYSTEM] Sign this message to request creating account.' readonly='')
-      input#signature(type='text' name='signature' placeholder='signature' required readonly='')
-      button(type='button' onclick='getMetamaskAccount(); signWithMetamask();') sign 
-      br
-      br
-      input#app_encrypted_csr(type='text' name='app_encrypted_csr' placeholder='app_encrypted_csr' readonly='')
-      button(type='button' onclick='provideCsr();') provide
-      br
-      br
-      input(type='submit' name='register' value='register' onclick='return true;')
-  .form
-    form(action='/app/test' method='post')
-      input(type='submit' name='register' value='register' onclick='return true;')
+html(lang='en')
+    head
+        meta(charset='UTF-8')
+        meta(name='viewport' content='width=device-width, initial-scale=1.0')
+        link(rel='stylesheet' type='text/css' href='../stylesheets/body.css')
+        link(rel='stylesheet' type='text/css' href='../stylesheets/navbar.css')
+        link(rel='stylesheet' type='text/css' href='../stylesheets/form.css')
+        title PPDNASSP
+    body
+        div.navbar
+            a.navbar-item.navbar-item-left(href='/app/index') PPDNASSP
+            a.navbar-item.navbar-item-right(href='/app/manage') Manage
+            a.navbar-item.navbar-item-right(href='/app/register') Register
+        form.form(action='/app/register' method='post')
+            h3.form-title REGISTER
+            input.form-input#address(type='text' name='address' placeholder='address' hidden readonly='')
+            input.form-input#message(type='text' name='message' placeholder='message' value='[PPDNASSP] Sign this message to request creating account.' readonly='')
+            input.form-input#signature(type='text' name='signature' placeholder='signature' required readonly='')
+            button.form-button.form-metamask-button-color(type='button' onclick='getMetamaskAccount(); signWithMetamask();') sign 
+            br
+            br
+            input.form-input#app_encrypted_csr(type='text' name='app_encrypted_csr' placeholder='app_encrypted_csr' readonly='')
+            button.form-button.form-metamask-button-color(type='button' onclick='provideCsr();') provide
+            br
+            br
+            input.form-button.form-button-color(type='submit' name='register' value='register' onclick='return true;')
+        form.form(action='/app/test' method='post')
+            input.form-button.form-button-color(type='submit' name='register' value='register' onclick='return true;')
+        br
+        br
+        br
+    script(src='../javascripts/web3.bundle.js')
+    script(src='../javascripts/eth_sig_util.bundle.js')
+    script(src='../javascripts/app_register.js')
+    script(src='../javascripts/IdentityManager.abi.js')
+    script(src='../javascripts/Identity.abi.js')
+    script(src='../javascripts/did_config.js')

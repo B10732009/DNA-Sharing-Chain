@@ -5,47 +5,26 @@
     padding: 20px;
     border: 1px solid #F0F0F0;
     border-radius: 30px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     background-color: #282A36;
     color: #F0F0F0;
     text-align: center;
 }
 
-.form p {
+.form-title {
     font-weight: bold;
 }
 
-.form input[type="text"],
-.form input[type="password"],
-.form input[type="file"] {
+.form-input {
     width: 80%;
-    padding: 10px;
     margin: 10px 0;
+    padding: 10px;
     border: 1px solid #F0F0F0;
     border-radius: 5px;
     background-color: #272727;
     color: #F0F0F0;
-
 }
 
-table {
-    width: 100%;
-    text-align: center;
-}
-
-tr {
-    width: 20%;
-}
-
-th, td {
-    width: 20%;
-}
-
-
-
-.form input[type="submit"],
-.form button,
-.form select {
+.form-button {
     width: 82%;
     padding: 10px;
     margin: 10px 0;
@@ -54,37 +33,52 @@ th, td {
     cursor: pointer;
 }
 
-.form select {
-    border: 1px solid #F0F0F0;
-    background-color: #272727;
-    color: #F0F0F0;
-}
-
-.form input[type="submit"] {
+.form-button-color {
     background-color: #154560;
     color: #F0F0F0;
 }
 
-.form input[type="submit"]:hover {
-    background-color: #126FA5;
-    /* color: #272727; */
+.form-button-color:hover {
+    background-color: #126FA5; 
 }
 
-.form button {
+.form-metamask-button-color {
     background-color: #9E461A;
     color: #F0F0F0;
 }
 
-.form button:hover {
+.form-metamask-button-color:hover {
     background-color: #C1551F;
-    /* color: #272727; */
 }
 
-.form div {
+.form-select {
+    width: 82%;
     padding: 10px;
+    margin: 10px 0;
+    border: 1px solid #F0F0F0;
+    border-radius: 5px;
+    cursor: pointer;
+    background-color: #272727;
+    color: #F0F0F0;
 }
 
-.form label {
-    width: 30%;
-    margin-right: 30px;
+.form-table {
+    width: 100%;
+    text-align: center;
+}
+
+.form-table-item {
+    width: 20%;
+}
+
+.form-table-button-color {
+    background-color: #ADADAD;
+}
+
+.form-table-button-color:hover {
+    background-color: #A6A600;
+}
+
+.form-table-button-selected-color {
+    background-color: #737300;
 }
