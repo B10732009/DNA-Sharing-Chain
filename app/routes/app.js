@@ -327,6 +327,11 @@ router.post('/register', async function (req, res) {
         };
         await wallet.put(address, x509Identity);
         console.log('Successfully create new user in the wallet');
+
+        // create a new user object on app chain
+        const createUserResult = await accessControlContract.submitTransaction('createUser', address, 'patient');
+        console.log(createUserResult);
+
         res.redirect('/app/index');
     }
     catch (error) {
@@ -339,7 +344,139 @@ router.get('/manage', function (req, res, next) {
 });
 
 router.post('/manage', async function (req, res) {
-    createTransaction('0x3e014e5c311a7d6f652ca4f8bb016f4338a44118', wallet, FabricCommon);
+    // createTransaction('0x3e014e5c311a7d6f652ca4f8bb016f4338a44118', wallet, FabricCommon);
+    res.redirect('/app/index');
+});
+
+router.post('/manage/get_permission', async function (req, res) {
+    // get user's address
+    const address = req.body.address;
+    console.log(address);
+
+    // get permission from app chain
+    const permission = await accessControlContract.evaluateTransaction('getPermission', address);
+    const permissionJson = JSON.parse(permission.toString());
+    console.log(permissionJson);
+    res.send({ data: permissionJson.data });
+});
+
+router.post('/manage/update_permission', async function (req, res) {
+    const address = req.body.address;
+    const permission = req.body.permission;
+    console.log(address, permission);
+
+    const _userName = address;
+
+    let userJson = await wallet.get(_userName);
+    // console.log(userJson);
+    let user = FabricCommon.User.createUser(
+        _userName,
+        null,
+        userJson.mspId,
+        userJson.credentials.certificate,
+        null
+    );
+    // let cryptoSuite = _fabricCommon.Utils.newCryptoSuite();
+    // let publicKey = await cryptoSuite.createKeyFromRaw(userJson.credentials.certificate);
+    // let identity = new _fabricCommon.Identity(userJson.credentials.certificate, publicKey, userJson.mspId, cryptoSuite);
+    // let user = new _fabricCommon.User(_userName);
+    // user._cryptoSuite = cryptoSuite;
+    // user._identity = identity;
+
+    console.log(user);
+    let userContext = gateway.client.newIdentityContext(user);
+    // userContext.client.mspid = mspOrg1;
+    console.log(userContext);
+
+    let endorsement = accessControlChannel.channel.newEndorsement('access-control-chaincode');
+    let proposalBytes = endorsement.build(userContext, {
+        fcn: 'getPermission',
+        args: [address]
+    });
+    console.log(proposalBytes);
+
+    const hash = crypto.createHash('sha256')
+        .update(proposalBytes)
+        .digest('hex');
+
+    const ecdsa = new elliptic.ec(elliptic.curves['p256']);
+    const temp = fs.readFileSync(path.join(__dirname, 'key.pem'), 'utf8');
+    console.log(temp);
+    const { prvKeyHex } = KEYUTIL.getKey(temp);
+    console.log(prvKeyHex);
+    const signKey = ecdsa.keyFromPrivate(prvKeyHex, 'hex');
+    const signature = ecdsa.sign(Buffer.from(hash, 'hex'), signKey, { canonical: true });
+    const signatureDER = Buffer.from(signature.toDER());
+    console.log(signatureDER.toString());
+
+    endorsement.sign(signatureDER);
+
+    console.log(accessControlChannel.channel.getEndorsers());
+
+
+    const proposalRespone = await endorsement.send({ targets: accessControlChannel.channel.getEndorsers() });
+    console.log('proposalResponse', proposalRespone);
+
+    let commit = endorsement.newCommit();
+    let commitBytes = commit.build(userContext);
+    let commitHash = crypto.createHash('sha256')
+        .update(commitBytes)
+        .digest('hex');
+    const commitSignature = ecdsa.sign(Buffer.from(commitHash, 'hex'), signKey, { canonical: true });
+    const commitSignatureDER = Buffer.from(commitSignature.toDER());
+    const temp123 = commit.sign(commitSignatureDER);
+    console.log(temp123);
+    const commitResponse = await commit.send({
+        requestTimeout: 300000,
+        targets: accessControlChannel.channel.getCommitters()
+    });
+    console.log(commitResponse);
+
+    // const userJson = await wallet.get(address);
+    // console.log('userJson =', userJson);
+
+    // const user = FabricCommon.User.createUser(address, null, userJson.mspId, userJson.credentials.certificate, null);
+    // console.log('user =', user);
+
+    // const userContext = gateway.client.newIdentityContext(user);
+
+    // const endorsement = accessControlChannel.channel.newEndorsement('access-control-chaincode');
+    // const proposalBytes = endorsement.build(userContext, {
+    //     fcn: '_get',
+    //     args: [address]
+    // });
+    // const hashedProposalBytes = crypto.createHash('sha256')
+    //     .update(proposalBytes)
+    //     .digest('hex');
+
+    // const keyFile = fs.readFileSync(path.join(__dirname, 'key.pem'), 'utf8');
+    // const key = KEYUTIL.getKey(keyFile).prvKeyHex;
+
+    // const ecdsa = new elliptic.ec(elliptic.curves['p256']);
+    // const signKey = ecdsa.keyFromPrivate(key, 'hex');
+    // const signature = ecdsa.sign(Buffer.from(hashedProposalBytes, 'hex'), signKey, { canonical: true });
+    // const signatureDer = Buffer.from(signature.toDER());
+
+    // endorsement.sign(signatureDer);
+    // const endorsers = accessControlChannel.channel.getEndorsers();
+    // const proposalResponse = await endorsement.send({ targets: endorsers });
+    // console.log('proposalResponse', proposalResponse);
+
+    // const commit = endorsement.newCommit();
+    // const commitBytes = commit.build(userContext);
+    // const commitHash = crypto.createHash('sha256')
+    //     .update(commitBytes)
+    //     .digest('hex');
+    // const commitSignature = ecdsa.sign(Buffer.from(commitHash, 'hex'), { canonical: true });
+    // const commitSignatureDer = Buffer.from(commitSignature.toDER());
+    // commit.sign(commitSignatureDer)
+    // const commiters = accessControlChannel.channel.getCommitters();
+    // const commitResponse = await commit.send({
+    //     requestTimeout: 300000,
+    //     targets: commiters
+    // });
+    // console.log(commitResponse);
+
     res.redirect('/app/index');
 });
 

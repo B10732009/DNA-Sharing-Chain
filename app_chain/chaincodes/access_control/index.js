@@ -11,41 +11,18 @@ class AccessControlContract extends Contract {
         // function that will be invoked on chaincode instantiation
     }
 
-    async addUser(ctx, userAddress) {
-        const userInfo = {
-            permission: {
-                chr1: 0,
-                chr2: 0,
-                chr3: 0,
-                chr4: 0,
-                chr5: 0,
-                chr6: 0,
-                chr7: 0,
-                chr8: 0,
-                chr9: 0,
-                chr10: 0,
-                chr11: 0,
-                chr12: 0,
-                chr13: 0,
-                chr14: 0,
-                chr15: 0,
-                chr16: 0,
-                chr17: 0,
-                chr18: 0,
-                chr19: 0,
-                chr20: 0, 
-                chr21: 0,
-                chr22: 0,
-                chr23: 0,
-                chr24: 0
+    async createUser(ctx, address, role) {
+        const userInfo = { role: role };
+        if (role == 'patient') {
+            userInfo.permission = {
+                chr1: 0, chr2: 0, chr3: 0, chr4: 0, chr5: 0, chr6: 0,
+                chr7: 0, chr8: 0, chr9: 0, chr10: 0, chr11: 0, chr12: 0,
+                chr13: 0, chr14: 0, chr15: 0, chr16: 0, chr17: 0, chr18: 0,
+                chr19: 0, chr20: 0, chr21: 0, chr22: 0, chr23: 0, chr24: 0
             }
-        };
-        await ctx.stub.putState(userAddress, Buffer.from(JSON.stringify(userInfo)));
+        }
+        await ctx.stub.putState(address, Buffer.from(JSON.stringify(userInfo)));
         return { success: 'OK' };
-    }
-
-    async queryUser() {
-
     }
 
     async updatePermission(ctx, address, newPermission) {
@@ -55,12 +32,29 @@ class AccessControlContract extends Contract {
         }
         let userInfo = JSON.parse(buffer);
         user.permission = newPermission;
-        await ctx.stub.putState(userAddress, Buffer.from(JSON.stringify(userInfo)));
+        await ctx.stub.putState(address, Buffer.from(JSON.stringify(userInfo)));
         return { success: 'OK' };
     }
 
-    async queryPermission() {
+    async getPermission(ctx, address) {
+        const buffer = await ctx.stub.getState(address);
+        if (!buffer || !buffer.length) {
+            return { error: 'NOT_FOUND' };
+        }
+        const userInfo = JSON.parse(buffer);
+        if (userInfo.role != 'patient') {
+            return { error: 'NOT_A_PATIENT' };
+        }
+        return { success: 'ok', data: userInfo.permission };
+    }
 
+    async queryPermission(ctx, queryString) {
+        const queryResults = this._query(ctx, queryString);
+        let permissions = [];
+        for (let queryResult of queryResults) {
+            permissions.push(queryResult);
+        }
+        return { success: 'ok', data: permissions };
     }
 
     async _put(ctx, key, value) {

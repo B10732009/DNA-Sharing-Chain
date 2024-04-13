@@ -12,7 +12,7 @@ html(lang='en')
             a.navbar-item.navbar-item-left(href='/app/index') PPDNASSP
             a.navbar-item.navbar-item-right(href='/app/manage') Manage
             a.navbar-item.navbar-item-right(href='/app/register') Register
-        form.form(action='/app/manage' method='post')
+        form.form(action='/app/manage/update_permission' method='post')
             h3.form-title EDIT PERMISSION
             table.form-table
                 thead
@@ -24,6 +24,11 @@ html(lang='en')
                         th.form-table-item PUBLIC
                     tr
                 tbody#tbody
+            br
+            br
+            input.form-input#address(type='text' name='address' placeholder='address')
+            input.form-input#permission(type='text' name='permission' placeholder='permission')
+            input.form-button.form-button-color(type='submit' name='update' value='update permission' onclick='wrapPermission(); return true;')
         br
         br
         br
