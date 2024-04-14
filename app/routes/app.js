@@ -173,6 +173,11 @@ async function init() {
 init();
 
 async function createTransaction(_userName, _wallet, _fabricCommon) {
+    // const a = await accessControlContract.evaluateTransaction('updatePermission', address, );
+
+
+
+
     let userJson = await _wallet.get(_userName);
     // console.log(userJson);
     let user = _fabricCommon.User.createUser(
@@ -196,8 +201,8 @@ async function createTransaction(_userName, _wallet, _fabricCommon) {
 
     let endorsement = accessControlChannel.channel.newEndorsement('access-control-chaincode');
     let proposalBytes = endorsement.build(userContext, {
-        fcn: 'get',
-        args: ['aaa']
+        fcn: 'updatePermission',
+        args: ['0x3e014e5c311a7d6f652ca4f8bb016f4338a44118', '{chr3: 2}']
     });
     console.log(proposalBytes);
 
@@ -365,67 +370,36 @@ router.post('/manage/update_permission', async function (req, res) {
     const permission = req.body.permission;
     console.log(address, permission);
 
-    const _userName = address;
+    const userJson = await wallet.get(address);
+    const user = FabricCommon.User.createUser(address, null, userJson.mspId, userJson.credentials.certificate, null);
+    const userContext = gateway.client.newIdentityContext(user);
 
-    let userJson = await wallet.get(_userName);
-    // console.log(userJson);
-    let user = FabricCommon.User.createUser(
-        _userName,
-        null,
-        userJson.mspId,
-        userJson.credentials.certificate,
-        null
-    );
-    // let cryptoSuite = _fabricCommon.Utils.newCryptoSuite();
-    // let publicKey = await cryptoSuite.createKeyFromRaw(userJson.credentials.certificate);
-    // let identity = new _fabricCommon.Identity(userJson.credentials.certificate, publicKey, userJson.mspId, cryptoSuite);
-    // let user = new _fabricCommon.User(_userName);
-    // user._cryptoSuite = cryptoSuite;
-    // user._identity = identity;
-
-    console.log(user);
-    let userContext = gateway.client.newIdentityContext(user);
-    // userContext.client.mspid = mspOrg1;
-    console.log(userContext);
-
-    let endorsement = accessControlChannel.channel.newEndorsement('access-control-chaincode');
-    let proposalBytes = endorsement.build(userContext, {
-        fcn: 'getPermission',
-        args: [address]
+    const endorsement = accessControlChannel.channel.newEndorsement('access-control-chaincode');
+    const proposalBytes = endorsement.build(userContext, {
+        fcn: 'updatePermission',
+        args: [address, permission]
     });
-    console.log(proposalBytes);
-
-    const hash = crypto.createHash('sha256')
+    const hashedProposalBytes = crypto.createHash('sha256')
         .update(proposalBytes)
         .digest('hex');
 
+    const keyFile = fs.readFileSync(path.join(__dirname, 'key.pem'), 'utf8');
+    const key = KEYUTIL.getKey(keyFile).prvKeyHex;
     const ecdsa = new elliptic.ec(elliptic.curves['p256']);
-    const temp = fs.readFileSync(path.join(__dirname, 'key.pem'), 'utf8');
-    console.log(temp);
-    const { prvKeyHex } = KEYUTIL.getKey(temp);
-    console.log(prvKeyHex);
-    const signKey = ecdsa.keyFromPrivate(prvKeyHex, 'hex');
-    const signature = ecdsa.sign(Buffer.from(hash, 'hex'), signKey, { canonical: true });
-    const signatureDER = Buffer.from(signature.toDER());
-    console.log(signatureDER.toString());
+    const signKey = ecdsa.keyFromPrivate(key, 'hex');
+    const signature = ecdsa.sign(Buffer.from(hashedProposalBytes, 'hex'), signKey, { canonical: true });
+    endorsement.sign(Buffer.from(signature.toDER()));
 
-    endorsement.sign(signatureDER);
+    const proposalResponse = await endorsement.send({ targets: accessControlChannel.channel.getEndorsers() });
+    console.log('proposalResponse =', proposalResponse);
 
-    console.log(accessControlChannel.channel.getEndorsers());
-
-
-    const proposalRespone = await endorsement.send({ targets: accessControlChannel.channel.getEndorsers() });
-    console.log('proposalResponse', proposalRespone);
-
-    let commit = endorsement.newCommit();
-    let commitBytes = commit.build(userContext);
-    let commitHash = crypto.createHash('sha256')
+    const commit = endorsement.newCommit();
+    const commitBytes = commit.build(userContext);
+    const hashedCommitBytes = crypto.createHash('sha256')
         .update(commitBytes)
         .digest('hex');
-    const commitSignature = ecdsa.sign(Buffer.from(commitHash, 'hex'), signKey, { canonical: true });
-    const commitSignatureDER = Buffer.from(commitSignature.toDER());
-    const temp123 = commit.sign(commitSignatureDER);
-    console.log(temp123);
+    const commitSignature = ecdsa.sign(Buffer.from(hashedCommitBytes, 'hex'), signKey, { canonical: true });
+    commit.sign(Buffer.from(commitSignature.toDER()));
     const commitResponse = await commit.send({
         requestTimeout: 300000,
         targets: accessControlChannel.channel.getCommitters()

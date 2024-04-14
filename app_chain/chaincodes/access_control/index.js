@@ -30,8 +30,8 @@ class AccessControlContract extends Contract {
         if (!buffer || !buffer.length) {
             return { error: 'NOT_FOUND' };
         }
-        let userInfo = JSON.parse(buffer);
-        user.permission = newPermission;
+        let userInfo = JSON.parse(buffer.toString());
+        userInfo.permission = JSON.parse(newPermission);
         await ctx.stub.putState(address, Buffer.from(JSON.stringify(userInfo)));
         return { success: 'OK' };
     }
@@ -49,7 +49,7 @@ class AccessControlContract extends Contract {
     }
 
     async queryPermission(ctx, queryString) {
-        const queryResults = this._query(ctx, queryString);
+        const queryResults = await this.query(ctx, queryString);
         let permissions = [];
         for (let queryResult of queryResults) {
             permissions.push(queryResult);
@@ -57,12 +57,12 @@ class AccessControlContract extends Contract {
         return { success: 'ok', data: permissions };
     }
 
-    async _put(ctx, key, value) {
+    async put(ctx, key, value) {
         await ctx.stub.putState(key, Buffer.from(value));
         return { success: 'OK' };
     }
 
-    async _get(ctx, key) {
+    async get(ctx, key) {
         const buffer = await ctx.stub.getState(key);
         if (!buffer || !buffer.length) {
             return { error: 'NOT_FOUND' };
@@ -70,7 +70,7 @@ class AccessControlContract extends Contract {
         return { success: 'OK', data: buffer.toString() };
     }
 
-    async _query(ctx, queryString) {
+    async query(ctx, queryString) {
         let queryIterator = await ctx.stub.getQueryResult(queryString);
         let queryResults = [];
         let iterator = await queryIterator.next();
