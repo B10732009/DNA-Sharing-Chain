@@ -142,6 +142,9 @@ let network;
 let accessControlChannel;
 let accessControlContract;
 
+let offlineSigningEndorsement;
+let offlineSigningCommit;
+
 async function init() {
     const ccpPath = path.join(__dirname, '..', '..', 'app_chain', 'fablo-target', 'fabric-config', 'connection-profiles', 'connection-profile-org1.json');
     ccp = buildCcp(ccpPath);
@@ -453,6 +456,80 @@ router.post('/manage/update_permission', async function (req, res) {
 
     res.redirect('/app/index');
 });
+
+router.post('/manage/update_permission/get_endorsement', async function (req, res) {
+    // get user's address and permission
+    const address = req.body.address;
+    const permission = req.body.permission;
+    console.log('address =', address);
+    console.log('permission =', permission);
+
+    // get user info from local wallet
+    const userJson = await wallet.get(address);
+    const user = FabricCommon.User.createUser(address, null, userJson.mspId, userJson.credentials.certificate, null);
+    const userContext = gateway.client.newIdentityContext(user);
+
+    // create a new endorsement proposal
+    offlineSigningEndorsement = accessControlChannel.channel.newEndorsement('access-control-chaincode');
+    const proposalBytes = offlineSigningEndorsement.build(userContext, {
+        fcn: 'updatePermission',
+        args: [address, permission]
+    });
+
+    // hash the proposal
+    const hashedProposalBytes = crypto.createHash('sha256')
+        .update(proposalBytes)
+        .digest('hex');
+
+    // send hashed proposal to client side
+    res.send({ data: hashedProposalBytes });
+});
+
+router.post('/manage/update_permission/get_commit', async function (req, res) {
+    // get user's address and signed proposal
+    const address = req.body.address;
+    const endorsementSignatureDer = req.body.endorsementSignatureDer;
+    console.log('address =', address);
+    console.log('endorsementSignatureDer =', endorsementSignatureDer);
+
+    // form endorsor object, and send it
+    offlineSigningEndorsement.sign(Buffer.from(endorsementSignatureDer));
+    const proposalResponse = await offlineSigningEndorsement.send({ targets: accessControlChannel.channel.getEndorsers() });
+    console.log('proposalResponse =', proposalResponse);
+
+    const userJson = await wallet.get(address);
+    const user = FabricCommon.User.createUser(address, null, userJson.mspId, userJson.credentials.certificate, null);
+    const userContext = gateway.client.newIdentityContext(user);
+
+    // create a new commit
+    offlineSigningCommit = offlineSigningEndorsement.newCommit();
+    const commitBytes = offlineSigningCommit.build(userContext);
+
+    // hash the commit
+    const hashedCommitBytes = crypto.createHash('sha256')
+        .update(commitBytes)
+        .digest('hex');
+
+    // send the commit to client side
+    res.send({ data: hashedCommitBytes });
+});
+
+router.post('/manage/update_permission/send_commit', async function (req, res) {
+    // get user's signed commit
+    const commitSignatureDer = req.body.commitSignatureDer;
+    console.log('commitSignature =', commitSignatureDer);
+
+    // form commiter object, and send it
+    offlineSigningCommit.sign(Buffer.from(commitSignatureDer));
+    const commitResponse = await offlineSigningCommit.send({
+        requestTimeout: 300000,
+        targets: accessControlChannel.channel.getCommitters()
+    });
+    console.log(commitResponse);
+
+    // send the result to client side
+    res.send({ data: commitResponse });
+})
 
 module.exports = router;
 

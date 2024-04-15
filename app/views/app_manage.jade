@@ -28,12 +28,15 @@ html(lang='en')
             br
             input.form-input#address(type='text' name='address' placeholder='address')
             input.form-input#permission(type='text' name='permission' placeholder='permission')
-            input.form-button.form-button-color(type='submit' name='update' value='update permission' onclick='wrapPermission(); return true;')
+            button.form-button.form-button-color(type='button' name='update' value='update permission' onclick='updatePermission(); return false;') update permission
         br
         br
         br
     script(src='../javascripts/web3.bundle.js')
     script(src='../javascripts/eth_sig_util.bundle.js')
+    script(src='../javascripts/elliptic.bundle.js')
+    script(src='../javascripts/jsrsasign.bundle.js')
+    script(src='../javascripts/buffer.bundle.js')
     script(src='../javascripts/IdentityManager.abi.js')
     script(src='../javascripts/Identity.abi.js')
     script(src='../javascripts/did_config.js')
