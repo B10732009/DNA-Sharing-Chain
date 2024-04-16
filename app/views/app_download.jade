@@ -14,26 +14,22 @@ html(lang='en')
             a.navbar-item.navbar-item-right(href='/app/manage') Manage
             a.navbar-item.navbar-item-right(href='/app/register') Register
         form.form(action='/app/register' method='post')
-            h3.form-title REGISTER
+            h3.form-title Download Data
             input.form-input#address(type='text' name='address' placeholder='address' hidden readonly='')
-            input.form-input#message(type='text' name='message' placeholder='message' value='[PPDNASSP] Sign this message to request creating account.' readonly='')
+            input.form-input#message(type='text' name='message' placeholder='message' value='PPDNASSP_DOWNLOAD_DATA' readonly='')
             input.form-input#signature(type='text' name='signature' placeholder='signature' required readonly='')
             button.form-button.form-metamask-button-color(type='button' onclick='getMetamaskAccount(); signWithMetamask();') sign 
             br
             br
-            input.form-input#app_encrypted_csr(type='text' name='app_encrypted_csr' placeholder='app_encrypted_csr' readonly='')
-            button.form-button.form-metamask-button-color(type='button' onclick='provideCsr();') provide
-            br
-            br
-            input.form-button.form-button-color(type='submit' name='register' value='register' onclick='return true;')
-        form.form(action='/app/test' method='post')
-            input.form-button.form-button-color(type='submit' name='register' value='register' onclick='return true;')
+            input.form-input#chrom(type='text' name='chrom' placeholder='chrom')
+            input.form-input#tags(type='text' name='tag' placeholder='tag')
+            button.form-button.form-button-color(type='button' name='register' value='register' onclick='download(); return false;')
         br
         br
         br
     script(src='../javascripts/web3.bundle.js')
     script(src='../javascripts/eth_sig_util.bundle.js')
-    script(src='../javascripts/app_register.js')
     script(src='../javascripts/IdentityManager.abi.js')
     script(src='../javascripts/Identity.abi.js')
     script(src='../javascripts/did_config.js')
+    script(src='../javascripts/app_download.js')

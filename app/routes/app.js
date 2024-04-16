@@ -12,6 +12,7 @@ const FabricCaServices = require('fabric-ca-client');
 const FabricCommon = require('fabric-common');
 const DID_CONFIG = require('../public/javascripts/did_config');
 const openssl = require('openssl-nodejs');
+const sqlite3 = require('sqlite3').verbose();
 
 function buildCcp(_ccpPath) {
     if (!fs.existsSync(_ccpPath)) {
@@ -173,7 +174,33 @@ async function init() {
     }
 }
 
-init();
+let db;
+
+async function initDatabase() {
+    // connect  to database
+    db = new sqlite3.Database(path.join(__dirname, 'database.sqlite'), sqlite3.OPEN_READWRITE,function (error) {
+        if (error) {
+            console.log(error);
+        }
+        else {
+            console.log('succcessfully connected to database');
+        }
+    });
+
+    // create table in database
+    db.serialize(function () {
+        db.run('CREATE TABLE IF NOT EXISTS header (address TEXT, data TEXT)');
+        db.run('CREATE TABLE IF NOT EXISTS gene (address TEXT, chrom TEXT, pos TEXT, id TEXT, ref TEXT, alt TEXT, qual TEXT, filter TEXT, info TEXT, format TEXT)');
+    });
+}
+
+async function iiiiint() {
+    await init();
+    await initDatabase();
+}
+// init();
+// initDatabase();
+iiiiint();
 
 async function createTransaction(_userName, _wallet, _fabricCommon) {
     // const a = await accessControlContract.evaluateTransaction('updatePermission', address, );
@@ -529,7 +556,34 @@ router.post('/manage/update_permission/send_commit', async function (req, res) {
 
     // send the result to client side
     res.send({ data: commitResponse });
-})
+});
+
+router.get('/download', async function (req, res, next) {
+    res.render('app_download');
+});
+
+router.post('/download', async function (req, res) {
+    const address = req.body.address;
+    const message = req.body.message;
+    const signature = req.body.signature;
+    const chrom = req.body.chrom;
+    const tags = req.body.tags;
+    console.log(address);
+    console.log(message);
+    console.log(signature);
+    console.log('chrom =', chrom);
+    console.log('tag =', tag);
+
+    const web3 = new Web3(DID_CONFIG.URL);
+    const recoveredAddress = web3.eth.accounts.recover(message, signature);
+    if (recoveredAddress.toLowerCase() != address.toLowerCase()) {
+        console.log("Fail to verify the signature.");
+        console.log(recoveredAddress, address);
+        res.redirect('/app/register');
+        return;
+    }
+    res.send({data: 'ok'});
+});
 
 module.exports = router;
 
