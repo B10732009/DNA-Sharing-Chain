@@ -16,7 +16,7 @@ html(lang='en')
         form.form(action='/app/register' method='post')
             h3.form-title REGISTER
             input.form-input#address(type='text' name='address' placeholder='address' hidden readonly='')
-            input.form-input#message(type='text' name='message' placeholder='message' value='[PPDNASSP] Sign this message to request creating account.' readonly='')
+            input.form-input#message(type='text' name='message' placeholder='message' value='APP_REGISTER' readonly='')
             input.form-input#signature(type='text' name='signature' placeholder='signature' required readonly='')
             button.form-button.form-metamask-button-color(type='button' onclick='getMetamaskAccount(); signWithMetamask();') sign 
             br

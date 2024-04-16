@@ -5,70 +5,66 @@ import "./identity.sol";
 
 contract IdentityManager {
 	struct User {
-		string userId;
-		address identityAddress;
-		uint userRole;
-		bool exist;
+		string userId; 							// government-created id
+		address userIdentityContractAddress;	// address of user's identity contract
+		uint userType;							// 0 for person, 1 for organization
+		bool userExist;							// flag to check if user exists
 	}
 
-	event Result(bool _status, string _msg);
+	event IdentityManagerEvent(bool status, string msg);
 	
 	mapping(address => bool) orgList;
-	mapping(address => User) userList; // user address => user infos
-	mapping(string => bool) userIdList; // user address => user id
+	mapping(address => User) userList; // user address => user
 	
 	constructor() {
 		orgList[0xe092b1fa25DF5786D151246E492Eed3d15EA4dAA] = true;
 	}
 
-	function addUser(string memory _userId, address _userAddress, uint _role) public {
+	function createUser(string memory _userId, address _userAddress, uint _userType) public {
 		// require(orgList[msg.sender], "only organization administrator can call this function.");
 		// require(!userIdList[_userId], "this id has been used.");
 		// require(!userList[_userAddress].exist, "this address has been used.");
 		// require(_role <= 4, "role should between 0 ~ 4.");
-		if (!orgList[msg.sender]) {
-			emit Result(false, "only organization administrator can call this function.");
-			return;
-		}
-		if (userIdList[_userId]) {
-			emit Result(false, "this id has been used.");
-			return;
-		}
-		if (userList[_userAddress].exist) {
-			emit Result(false, "this address has been used.");
-			return;
-		}
-		if (_role > 4) {
-			emit Result(false, "user role sould between 0 ~ 4.");
-			return;
-		}
-		userIdList[_userId] = true;
-		Identity identity = new Identity(_userAddress);
-		userList[_userAddress] = User(_userId, address(identity), _role, true);
-		emit Result(true, "ok.");
-	}
 
-	function checkUser(address _userAddress) public view returns(bool) {
-		return userList[_userAddress].exist;
+		// check conditions
+		if (!orgList[msg.sender]) {
+			emit IdentityManagerEvent(false, "only organization administrator can call this function.");
+			return;
+		}
+		if (userList[_userAddress].userExist) {
+			emit IdentityManagerEvent(false, "this address has been used.");
+			return;
+		}
+		if (_userType != 0 && _userType != 1) {
+			emit IdentityManagerEvent(false, "invalid user type.");
+			return;
+		}
+
+		// create a new identity contract
+		Identity identity = new Identity(_userAddress);
+
+		// put new user object into user list
+		userList[_userAddress] = User(_userId, address(identity), _userType, true);
+		emit IdentityManagerEvent(true, "ok.");
 	}
 
 	function getUserId(address _userAddress) public view returns(string memory) {
 		return userList[_userAddress].userId;
 	}
 
-	function getIdentityAddress(address _userAddress) public view returns(address) {
-		return userList[_userAddress].identityAddress;
+	function getUserIdentityContractAddress(address _userAddress) public view returns(address) {
+		return userList[_userAddress].userIdentityContractAddress;
 	}
 
-	function getUserRole(address _userAddress) public view returns(uint) {
-		return userList[_userAddress].userRole;
+	function getUserType(address _userAddress) public view returns(uint) {
+		return userList[_userAddress].userType;
 	}
 
 	function getUserExist(address _userAddress) public view returns(bool) {
-		return userList[_userAddress].exist;
+		return userList[_userAddress].userExist;
 	}
 
-	function verify(bytes32 _hashedMsg, uint8 _v, bytes32 _r, bytes32 _s) public pure returns(address) {
-		return ecrecover(_hashedMsg, _v, _r, _s);
-	}
+	// function verify(bytes32 _hashedMsg, uint8 _v, bytes32 _r, bytes32 _s) public pure returns(address) {
+	// 	return ecrecover(_hashedMsg, _v, _r, _s);
+	// }
 }

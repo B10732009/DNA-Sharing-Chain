@@ -9,27 +9,30 @@ async function showIdentityInformations() {
             const web3 = new Web3(DID_CONFIG.URL);
             const contract = new web3.eth.Contract(IdentityManagerAbi, DID_CONFIG.CONTRACTS.IDENTITY_MANAGER.ADDRESS);
 
-            // get role, hashed id
-            const role = await contract.methods.getUserRole(account)
+            // get type, id, identity contract address
+            const type = await contract.methods.getUserType(account)
                 .call({ from: account })
                 .catch(function (error) { console.log(error); });
-            const hashedId = await contract.methods.getUserId(account)
+            const id = await contract.methods.getUserId(account)
+                .call({ from: account })
+                .catch(function (error) { console.log(error); });
+            const identityContractAddress = await contract.methods.getUserIdentityContractAddress(account)
                 .call({ from: account })
                 .catch(function (error) { console.log(error); });
 
             // assign values to elements
-            switch (role) {
+            switch (type) {
                 case '1':
-                    document.getElementById('identity-info-role').value = 'patient';
+                    document.getElementById('identity-info-type').value = 'person';
                     break;
                 case '2':
-                    document.getElementById('identity-info-role').value = 'hospital';
+                    document.getElementById('identity-info-type').value = 'organization';
                     break;
                 default:
-                    document.getElementById('identity-info-role').value = 'reserach center';
+                    break;
             }
-            document.getElementById('identity-info-id').value = hashedId;
-            document.getElementById('identity-info-address').value = account;
+            document.getElementById('identity-info-id').value = id;
+            document.getElementById('identity-info-identity-contract-address').value = identityContractAddress;
         }
         catch (error) {
             console.log(error);
@@ -56,13 +59,13 @@ async function uploadEncryptedData() {
             // create identity contract instance
             const web3 = new Web3(DID_CONFIG.URL);
             const identityManagerContract = new web3.eth.Contract(IdentityManagerAbi, DID_CONFIG.CONTRACTS.IDENTITY_MANAGER.ADDRESS);
-            const identityAddress = await identityManagerContract.methods.getIdentityAddress(account)
+            const identityAddress = await identityManagerContract.methods.getUserIdentityContractAddress(account)
                 .call({ from: account })
                 .catch(function (error) { console.log(error); });
             const identityContract = new web3.eth.Contract(IdentityAbi, identityAddress);
 
             // sign message
-            const msg = '[DID SYSTEM] Sign this message to call identity functions.';
+            const msg = 'DID_UPLOAD_DATA';
             const hexMsg = web3.utils.toHex(msg);
             let signature = await window.ethereum.request({
                 method: 'personal_sign',
@@ -101,13 +104,13 @@ async function uploadEncryptedData() {
                     .catch(function (error) { console.log(error); });
 
                 // get events emitted from the contract
-                const returnValuesObject = await identityContract.getPastEvents('IdentityResult');
+                const returnValuesObject = await identityContract.getPastEvents('IdentityEvent');
                 const returnValues = returnValuesObject[0].returnValues;
                 console.log(returnValues);
             }
         }
         catch (error) {
-            console.log('Error connecting to MetaMask:');
+            console.log(error);
         }
     }
     else {
@@ -125,13 +128,13 @@ async function downloadEncryptedData() {
             // create identity contract instance
             const web3 = new Web3(DID_CONFIG.URL);
             const identityManagerContract = new web3.eth.Contract(IdentityManagerAbi, DID_CONFIG.CONTRACTS.IDENTITY_MANAGER.ADDRESS);
-            const identityAddress = await identityManagerContract.methods.getIdentityAddress(account)
+            const identityAddress = await identityManagerContract.methods.getUserIdentityContractAddress(account)
                 .call({ from: account })
                 .catch(function (error) { console.log(error); });
             const identityContract = new web3.eth.Contract(IdentityAbi, identityAddress);
 
             // sing message
-            const msg = '[DID SYSTEM] Sign this message to call identity functions.';
+            const msg = 'DID_DOWNLOAD_DATA';
             const hexMsg = web3.utils.toHex(msg);
             let signature = await window.ethereum.request({
                 method: 'personal_sign',

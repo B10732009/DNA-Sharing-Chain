@@ -14,16 +14,16 @@ async function getMetamaskAccount() {
     }
 }
 
-function checkFieldValues() {
-    const roleFieldValue = document.getElementById('role').value;
-    if (roleFieldValue == 0) {
-        alert('[ERROR] Please select a role.');
-        return false;
-    }
-    const addressFieldValue = document.getElementById('address').value;
-    if (!addressFieldValue) {
-        alert('[ERROR] Please provide a metamask account.');
-        return false;
-    }
-    return true;
-}
+// function checkFieldValues() {
+//     const roleFieldValue = document.getElementById('role').value;
+//     if (roleFieldValue == 0) {
+//         alert('[ERROR] Please select a role.');
+//         return false;
+//     }
+//     const addressFieldValue = document.getElementById('address').value;
+//     if (!addressFieldValue) {
+//         alert('[ERROR] Please provide a metamask account.');
+//         return false;
+//     }
+//     return true;
+// }

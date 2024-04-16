@@ -2,7 +2,7 @@
 pragma solidity ^0.8.13;
 
 contract Identity {
-	event IdentityResult(bool _status, string _msg);
+	event IdentityEvent(bool _status, string _msg);
 	
 	address owner;
 	mapping(string => string) data;
@@ -17,15 +17,16 @@ contract Identity {
 
 	function addData(string memory _name, string memory _data, bytes32 _hashedMsg, uint8 _v, bytes32 _r, bytes32 _s) public {
 		if (!verifySignature(_hashedMsg, _v, _r, _s)) {
-			emit IdentityResult(false, "only owner can add data.");
+			emit IdentityEvent(false, "only owner can add data.");
+			return;
 		}
 		data[_name] = _data;
-		emit IdentityResult(true, "ok.");
+		emit IdentityEvent(true, "ok.");
 	}
 
 	function getData(string memory _name, bytes32 _hashedMsg, uint8 _v, bytes32 _r, bytes32 _s) public view returns(string memory) {
 		if (!verifySignature(_hashedMsg, _v, _r, _s)) {
-			return "(error)";
+			return "only owner can get data.";
 		}
 		return data[_name];
 	}

@@ -14,9 +14,9 @@ html(lang='en')
             a.navbar-item.navbar-item-right(href='/did/register') Register Identity
         form.form
             h3.form-title Identity Infos
-            input.form-input#identity-info-role(type='text' name='role' placeholder='role' required='' readonly='')
-            input.form-input#identity-info-id(type='text' name='id' placeholder='id number' required='' readonly='')
-            input.form-input#identity-info-address(type='text' name='address' placeholder='address' required='' readonly='')
+            input.form-input#identity-info-type(type='text' name='id' placeholder='id number / org number' required='' readonly='')
+            input.form-input#identity-info-id(type='text' name='id' placeholder='id number / org number' required='' readonly='')
+            input.form-input#identity-info-identity-contract-address(type='text' name='identity-contract-address' placeholder='identity-contract-address' required='' readonly='')
             input.form-button.form-button-color(type='submit' name='show' value='show' onclick='showIdentityInformations(); return false;')
         form.form
             h3.form-title Upload Data

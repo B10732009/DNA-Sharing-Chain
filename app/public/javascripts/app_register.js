@@ -42,13 +42,13 @@ async function provideCsr() {
             // create identity contract instance
             const web3 = new Web3(DID_CONFIG.URL);
             const identityManagerContract = new web3.eth.Contract(IdentityManagerAbi, DID_CONFIG.CONTRACTS.IDENTITY_MANAGER.ADDRESS);
-            const identityAddress = await identityManagerContract.methods.getIdentityAddress(account)
+            const identityAddress = await identityManagerContract.methods.getUserIdentityContractAddress(account)
                 .call({ from: account })
                 .catch(function (error) { console.log(error); });
             const identityContract = new web3.eth.Contract(IdentityAbi, identityAddress);
 
             // sign message
-            const msg = '[DNASSSYSTEM] Sign this message to provide CSR';
+            const msg = 'APP_REGISTER';
             const hexMsg = web3.utils.toHex(msg);
             let signature = await window.ethereum.request({
                 method: 'personal_sign',
