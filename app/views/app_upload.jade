@@ -1,0 +1,33 @@
+doctype html
+html(lang='en')
+    head
+        meta(charset='UTF-8')
+        meta(name='viewport' content='width=device-width, initial-scale=1.0')
+        link(rel='stylesheet' type='text/css' href='../stylesheets/body.css')
+        link(rel='stylesheet' type='text/css' href='../stylesheets/navbar.css')
+        link(rel='stylesheet' type='text/css' href='../stylesheets/form.css')
+        title PPDNASSP
+    body
+        div.navbar
+            a.navbar-item.navbar-item-left(href='/app/index') PPDNASSP
+            a.navbar-item.navbar-item-right(href='/app/download') Download
+            a.navbar-item.navbar-item-right(href='/app/upload') Upload
+            a.navbar-item.navbar-item-right(href='/app/manage') Manage
+            a.navbar-item.navbar-item-right(href='/app/register') Register
+        form.form(action='/app/upload' method='post')
+            h3.form-title Upload DNA Sequence
+            input.form-input#dna-owner-id(type='text' name='dna_owner_id' placeholder='dna_owner_id' required='')
+            textarea.form-input#dna-owner-data(type='text' name='dna_owner_data' placeholder='dna_owner_data' rows="4")
+            input.form-input#dna-owner-data-file(type='file' name='dna_owner_data_file' placeholder='dna_owner_data_file' required='')
+            button.form-button.form-button-color(type='button' name='upload_file' value='upload_file' onclick='readDnaDataFile();') upload file
+            input.form-button.form-button-color(type='submit' name='upload' value='upload' onclick='return true;')
+        br
+        br
+        br
+    script(src='../javascripts/web3.bundle.js')
+    script(src='../javascripts/eth_sig_util.bundle.js')
+    script(src='../javascripts/IdentityManager.abi.js')
+    script(src='../javascripts/Identity.abi.js')
+    script(src='../javascripts/did_config.js')
+    script(src='../javascripts/app_upload.js')
+    

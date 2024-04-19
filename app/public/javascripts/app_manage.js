@@ -66,7 +66,7 @@ async function updatePermission() {
             const identityContract = new web3.eth.Contract(IdentityAbi, identityAddress);
 
             // sign message
-            const msg = '[DNASSSYSTEM] Sign this message to provide CSR';
+            const msg = 'APP_UPDATE_PERMISSION';
             const hexMsg = web3.utils.toHex(msg);
             let signature = await window.ethereum.request({
                 method: 'personal_sign',

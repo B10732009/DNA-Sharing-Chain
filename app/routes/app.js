@@ -178,7 +178,7 @@ let db;
 
 async function initDatabase() {
     // connect  to database
-    db = new sqlite3.Database(path.join(__dirname, 'database.sqlite'), sqlite3.OPEN_READWRITE,function (error) {
+    db = new sqlite3.Database(path.join(__dirname, 'database.sqlite'), sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, function (error) {
         if (error) {
             console.log(error);
         }
@@ -189,8 +189,8 @@ async function initDatabase() {
 
     // create table in database
     db.serialize(function () {
-        db.run('CREATE TABLE IF NOT EXISTS header (address TEXT, data TEXT)');
-        db.run('CREATE TABLE IF NOT EXISTS gene (address TEXT, chrom TEXT, pos TEXT, id TEXT, ref TEXT, alt TEXT, qual TEXT, filter TEXT, info TEXT, format TEXT)');
+        db.run('CREATE TABLE IF NOT EXISTS header (user_id TEXT, data TEXT)');
+        db.run('CREATE TABLE IF NOT EXISTS gene (user_id TEXT, chrom TEXT, pos TEXT, id TEXT, ref TEXT, alt TEXT, qual TEXT, filter TEXT, info TEXT, format TEXT)');
     });
 }
 
@@ -558,6 +558,31 @@ router.post('/manage/update_permission/send_commit', async function (req, res) {
     res.send({ data: commitResponse });
 });
 
+router.get('/upload', async function (req, res, next) {
+    res.render('app_upload');
+});
+
+router.post('/upload', async function (req, res) {
+    // get data owner's id and data
+    const id = req.body.dna_owner_id;
+    const data = req.body.dna_owner_data;
+
+    // separate header part and record part
+    const dataLines = data.split(/\r\n/);
+    const headers = dataLines.filter(function (dataLine) { return dataLine.slice(0, 2) == '##'; });
+    const records = dataLines.filter(function (dataLine) { return dataLine[0] != '#'; });
+
+    // insert data into database
+    db.serialize(function () {
+        db.run('INSERT INTO header VALUES(?,?)', [id, headers.join('\r\n')]);
+        for (const record of records) {
+            const items = record.split(/\s+/);
+            db.run('INSERT INTO gene VALUES(?,?,?,?,?,?,?,?,?,?)', 
+                [id, items[0], items[1], items[2], items[3], items[4], items[5], items[6], items[7], items.slice(8).join('\t')]);
+        }
+    });
+});
+
 router.get('/download', async function (req, res, next) {
     res.render('app_download');
 });
@@ -582,7 +607,7 @@ router.post('/download', async function (req, res) {
         res.redirect('/app/register');
         return;
     }
-    res.send({data: 'ok'});
+    res.send({ data: 'ok' });
 });
 
 module.exports = router;
