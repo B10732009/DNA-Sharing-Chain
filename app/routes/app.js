@@ -614,12 +614,6 @@ router.post('/download', async function (req, res) {
     const message = req.body.message;
     const signature = req.body.signature;
     const chromRanges = req.body.chrom;
-    const tags = req.body.tags;
-    console.log(address);
-    console.log(message);
-    console.log(signature);
-    console.log('chromRanges =', chromRanges);
-    console.log('tag =', tags);
 
     // verify signature with message
     const web3 = new Web3(DID_CONFIG.URL);
@@ -632,38 +626,30 @@ router.post('/download', async function (req, res) {
     }
 
     const contract = new web3.eth.Contract(IDENTITY_MANAGER_ABI, DID_CONFIG.CONTRACTS.IDENTITY_MANAGER.ADDRESS);
-
-
-    let query = {
-        'selector': {
-            'role': 'patient',
-            'permission': {
-                // 'chr2': {
-                //     '$lt': 2           
-                // }
-            }
-        }
-    };
-
     const level = 2;
+
+    // create a array containing all target chroms
+    let chroms = [];
     const splittedChromRanges = chromRanges.split(',');
     for (const chromRange of splittedChromRanges) {
         const splittedChromRange = chromRange.split('-');
-        const start = splittedChromRange[0];
-        const end = splittedChromRange[1];
+        const start = parseInt(splittedChromRange[0]);
+        const end = parseInt(splittedChromRange[1]);
         for (let i = start; i <= end; i++) {
-            query.selector.permission[`chr${i}`] = { '$lt': level };
+            chroms.push(`chr${i}`);
         }
     }
-    console.log(query);
-    // for (const chromRange of chrom.split(',')) {
-    //     const splittedChromRange = chromRange.split('-');
-    //     const start = splittedChromRange[0];
-    //     const end = splittedChromRange[1];
-    //     for (let i = start; i <= end; i++) {
-    //         query.selector[`chr${i}`] = true;
-    //     }
-    // }
+
+    // create query
+    let query = {
+        'selector': {
+            'role': 'patient',
+            'permission': {}
+        }
+    };
+    for (const chrom of chroms) {
+        query.selector.permission[chrom] = { '$lt': level };
+    }
 
     // query permission from app chain
     const queryResultBuffer = await accessControlContract.evaluateTransaction('query', JSON.stringify(query));
@@ -678,7 +664,7 @@ router.post('/download', async function (req, res) {
 
         // query data of current target user
         const headerObject = await dbAll('SELECT * FROM header WHERE user_id = ?', [userId]);
-        const recordObject = await dbAll('SELECT * FROM gene WHERE user_id = ?', [userId]);
+        const recordObject = await dbAll(`SELECT * FROM gene WHERE user_id = ? AND chrom IN (?${',?'.repeat(chroms.length - 1)})`, [userId].concat(chroms));
 
         // build file text
         queryResult.data[i].value = '';
@@ -686,7 +672,6 @@ router.post('/download', async function (req, res) {
             queryResult.data[i].value += header.data;
         }
         queryResult.data[i].value += '\\r\\n';
-        // queryResult.data[i].value += '\\r\\n#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\\r\\n';
         for (const record of recordObject) {
             queryResult.data[i].value += record.chrom + '\t'
                 + record.pos + '\t'
@@ -701,60 +686,10 @@ router.post('/download', async function (req, res) {
         queryResult.data[i].value = queryResult.data[i].value.replace(/"/g, '\\"')
             .replace(/\r/g, '\\r')
             .replace(/\n/g, '\\n');
-        console.log('queryResult.data[i].value =', queryResult.data[i].value);
     }
-    console.log('queryResult =', queryResult);
+
+    // send data back to front end
     res.send({ data: queryResult.data });
-
-    // for (let i = 0; i < queryResult.data.length; i++) {
-    //     const userId = await contract.methods.getUserId(queryResult.data[i].key)
-    //         .call({ from: queryResult.data[i].key })
-    //         .catch(function (error) { console.log(error); });
-    //     let header = 'sss', records = 'ddd';
-    //     await db.serialize(async function () {
-    //         // get header from database
-    //         header = await dbAll('SELECT * FROM header WHERE user_id = ?', [userId]);
-    //         console.log('h =', header);
-    //         // db.all('SELECT * FROM header WHERE user_id = ?', [userId], function (error, result) {
-    //         //     if (error) {
-    //         //         console.log(error);
-    //         //     }
-    //         //     else {
-    //         //         console.log('result =', result);
-    //         //         header = result.data;
-    //         //     }
-    //         // });
-
-    //         // get records from database
-    //         records = await dbAll('SELECT * FROM gene WHERE user_id = ?', [userId]);
-    //         console.log('r = ', records);
-    //         // db.all('SELECT * FROM gene WHERE user_id = ?', [userId], function (error, result) {
-    //         //     if (error) {
-    //         //         console.log(error);
-    //         //     }
-    //         //     else {
-    //         //         console.log('result =', result);
-    //         //         records = '';
-    //         //         for (const record of result) {
-    //         //             records += record.chrom + '\t'
-    //         //                 + record.pos + '\t'
-    //         //                 + record.id + '\t'
-    //         //                 + record.ref + '\t'
-    //         //                 + record.alt + '\t'
-    //         //                 + record.qual + '\t'
-    //         //                 + record.filter + '\t'
-    //         //                 + record.info + '\t'
-    //         //                 + record.format + '\r\n';
-    //         //         }
-    //         //     }
-    //         // });
-    //     });
-    //     queryResult.data[i].value = header + records;
-
-    //     // queryResult.data[i].value =  
-    // }
-
-
 });
 
 module.exports = router;
