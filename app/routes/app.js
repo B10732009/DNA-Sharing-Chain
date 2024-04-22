@@ -10,9 +10,12 @@ const { Web3 } = require('web3');
 const { Gateway, Wallets } = require('fabric-network');
 const FabricCaServices = require('fabric-ca-client');
 const FabricCommon = require('fabric-common');
-const DID_CONFIG = require('../public/javascripts/did_config');
 const openssl = require('openssl-nodejs');
 const sqlite3 = require('sqlite3').verbose();
+const DID_CONFIG = require('../public/javascripts/did_config');
+const IDENTITY_MANAGER_ABI = require('../public/javascripts/IdentityManager.abi');
+const IDENTITY_ABI = require('../public/javascripts/Identity.abi');
+
 
 function buildCcp(_ccpPath) {
     if (!fs.existsSync(_ccpPath)) {
@@ -191,6 +194,19 @@ async function initDatabase() {
     db.serialize(function () {
         db.run('CREATE TABLE IF NOT EXISTS header (user_id TEXT, data TEXT)');
         db.run('CREATE TABLE IF NOT EXISTS gene (user_id TEXT, chrom TEXT, pos TEXT, id TEXT, ref TEXT, alt TEXT, qual TEXT, filter TEXT, info TEXT, format TEXT)');
+    });
+}
+
+async function dbAll(queryStr, queryParams) {
+    return new Promise(function (resolve, reject) {
+        db.all(queryStr, queryParams, function (error, rows) {
+            if (error) {
+                reject(error);
+            }
+            else {
+                resolve(rows);
+            }
+        });
     });
 }
 
@@ -567,18 +583,23 @@ router.post('/upload', async function (req, res) {
     const id = req.body.dna_owner_id;
     const data = req.body.dna_owner_data;
 
+    // get hashed id
+    const hashedId = crypto.createHash('sha256')
+        .update(id.toString())
+        .digest('hex');
+
     // separate header part and record part
     const dataLines = data.split(/\r\n/);
-    const headers = dataLines.filter(function (dataLine) { return dataLine.slice(0, 2) == '##'; });
+    const headers = dataLines.filter(function (dataLine) { return dataLine[0] == '#'; });
     const records = dataLines.filter(function (dataLine) { return dataLine[0] != '#'; });
 
     // insert data into database
     db.serialize(function () {
-        db.run('INSERT INTO header VALUES(?,?)', [id, headers.join('\r\n')]);
+        db.run('INSERT INTO header VALUES(?,?)', [hashedId, headers.join('\r\n')]);
         for (const record of records) {
             const items = record.split(/\s+/);
-            db.run('INSERT INTO gene VALUES(?,?,?,?,?,?,?,?,?,?)', 
-                [id, items[0], items[1], items[2], items[3], items[4], items[5], items[6], items[7], items.slice(8).join('\t')]);
+            db.run('INSERT INTO gene VALUES(?,?,?,?,?,?,?,?,?,?)',
+                [hashedId, items[0], items[1], items[2], items[3], items[4], items[5], items[6], items[7], items.slice(8).join('\t')]);
         }
     });
 });
@@ -588,17 +609,19 @@ router.get('/download', async function (req, res, next) {
 });
 
 router.post('/download', async function (req, res) {
+    // get user's address, message, signature, chromsome ranges, tags
     const address = req.body.address;
     const message = req.body.message;
     const signature = req.body.signature;
-    const chrom = req.body.chrom;
+    const chromRanges = req.body.chrom;
     const tags = req.body.tags;
     console.log(address);
     console.log(message);
     console.log(signature);
-    console.log('chrom =', chrom);
-    console.log('tag =', tag);
+    console.log('chromRanges =', chromRanges);
+    console.log('tag =', tags);
 
+    // verify signature with message
     const web3 = new Web3(DID_CONFIG.URL);
     const recoveredAddress = web3.eth.accounts.recover(message, signature);
     if (recoveredAddress.toLowerCase() != address.toLowerCase()) {
@@ -607,7 +630,131 @@ router.post('/download', async function (req, res) {
         res.redirect('/app/register');
         return;
     }
-    res.send({ data: 'ok' });
+
+    const contract = new web3.eth.Contract(IDENTITY_MANAGER_ABI, DID_CONFIG.CONTRACTS.IDENTITY_MANAGER.ADDRESS);
+
+
+    let query = {
+        'selector': {
+            'role': 'patient',
+            'permission': {
+                // 'chr2': {
+                //     '$lt': 2           
+                // }
+            }
+        }
+    };
+
+    const level = 2;
+    const splittedChromRanges = chromRanges.split(',');
+    for (const chromRange of splittedChromRanges) {
+        const splittedChromRange = chromRange.split('-');
+        const start = splittedChromRange[0];
+        const end = splittedChromRange[1];
+        for (let i = start; i <= end; i++) {
+            query.selector.permission[`chr${i}`] = { '$lt': level };
+        }
+    }
+    console.log(query);
+    // for (const chromRange of chrom.split(',')) {
+    //     const splittedChromRange = chromRange.split('-');
+    //     const start = splittedChromRange[0];
+    //     const end = splittedChromRange[1];
+    //     for (let i = start; i <= end; i++) {
+    //         query.selector[`chr${i}`] = true;
+    //     }
+    // }
+
+    // query permission from app chain
+    const queryResultBuffer = await accessControlContract.evaluateTransaction('query', JSON.stringify(query));
+    const queryResult = JSON.parse(queryResultBuffer.toString());
+
+    // query data from database
+    for (let i = 0; i < queryResult.data.length; i++) {
+        // get user (hashed) id
+        const userId = await contract.methods.getUserId(queryResult.data[i].key)
+            .call({ from: queryResult.data[i].key })
+            .catch(function (error) { console.log(error); });
+
+        // query data of current target user
+        const headerObject = await dbAll('SELECT * FROM header WHERE user_id = ?', [userId]);
+        const recordObject = await dbAll('SELECT * FROM gene WHERE user_id = ?', [userId]);
+
+        // build file text
+        queryResult.data[i].value = '';
+        for (const header of headerObject) {
+            queryResult.data[i].value += header.data;
+        }
+        queryResult.data[i].value += '\\r\\n';
+        // queryResult.data[i].value += '\\r\\n#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\\r\\n';
+        for (const record of recordObject) {
+            queryResult.data[i].value += record.chrom + '\t'
+                + record.pos + '\t'
+                + record.id + '\t'
+                + record.ref + '\t'
+                + record.alt + '\t'
+                + record.qual + '\t'
+                + record.filter + '\t'
+                + record.info + '\t'
+                + record.format + '\r\n';
+        }
+        queryResult.data[i].value = queryResult.data[i].value.replace(/"/g, '\\"')
+            .replace(/\r/g, '\\r')
+            .replace(/\n/g, '\\n');
+        console.log('queryResult.data[i].value =', queryResult.data[i].value);
+    }
+    console.log('queryResult =', queryResult);
+    res.send({ data: queryResult.data });
+
+    // for (let i = 0; i < queryResult.data.length; i++) {
+    //     const userId = await contract.methods.getUserId(queryResult.data[i].key)
+    //         .call({ from: queryResult.data[i].key })
+    //         .catch(function (error) { console.log(error); });
+    //     let header = 'sss', records = 'ddd';
+    //     await db.serialize(async function () {
+    //         // get header from database
+    //         header = await dbAll('SELECT * FROM header WHERE user_id = ?', [userId]);
+    //         console.log('h =', header);
+    //         // db.all('SELECT * FROM header WHERE user_id = ?', [userId], function (error, result) {
+    //         //     if (error) {
+    //         //         console.log(error);
+    //         //     }
+    //         //     else {
+    //         //         console.log('result =', result);
+    //         //         header = result.data;
+    //         //     }
+    //         // });
+
+    //         // get records from database
+    //         records = await dbAll('SELECT * FROM gene WHERE user_id = ?', [userId]);
+    //         console.log('r = ', records);
+    //         // db.all('SELECT * FROM gene WHERE user_id = ?', [userId], function (error, result) {
+    //         //     if (error) {
+    //         //         console.log(error);
+    //         //     }
+    //         //     else {
+    //         //         console.log('result =', result);
+    //         //         records = '';
+    //         //         for (const record of result) {
+    //         //             records += record.chrom + '\t'
+    //         //                 + record.pos + '\t'
+    //         //                 + record.id + '\t'
+    //         //                 + record.ref + '\t'
+    //         //                 + record.alt + '\t'
+    //         //                 + record.qual + '\t'
+    //         //                 + record.filter + '\t'
+    //         //                 + record.info + '\t'
+    //         //                 + record.format + '\r\n';
+    //         //         }
+    //         //     }
+    //         // });
+    //     });
+    //     queryResult.data[i].value = header + records;
+
+    //     // queryResult.data[i].value =  
+    // }
+
+
 });
 
 module.exports = router;

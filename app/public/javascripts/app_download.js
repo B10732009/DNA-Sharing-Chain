@@ -21,6 +21,8 @@ async function signWithMetamask() {
             const account = accounts[0];
 
             const msg = document.getElementById('message').value;
+            console.log('msg =', msg);
+            console.log(account);
 
             const web3 = new Web3(window.ethereum);
             const signature = await web3.eth.personal.sign(msg, account);
@@ -39,6 +41,7 @@ async function download() {
     const chrom = document.getElementById('chrom').value;
     const tags = document.getElementById('tags').value;
 
+    // get query result
     const downloadRes = await fetch('/app/download', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -51,6 +54,38 @@ async function download() {
         })
     });
     const downloadResJson = await downloadRes.json();
+    const queryResult = downloadResJson.data;
+
+    const tbody = document.getElementById('tbody');
+    for (const item of queryResult) {
+        // add a new row containing two cells
+        const row = tbody.insertRow();
+        const cell0 = row.insertCell(0);
+        const cell1 = row.insertCell(1);
+
+        // set id
+        cell0.innerText = item.key;
+
+        // set download button
+        const button = document.createElement('button');
+        button.innerText = 'download';
+        button.setAttribute('class', 'form-button form-table-button-selected-color');
+        button.setAttribute('type', 'button');
+        button.setAttribute('onclick', `downloadFile('${item.key}.vcf', '${item.value}'); return false;`);
+        cell1.appendChild(button);
+    }
+
+
     console.log('downloadResJson =', downloadResJson);
     
+}
+
+async function downloadFile(fileName, fileContent) {
+    let element = document.createElement('a');
+    element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(fileContent));
+    element.setAttribute('download', fileName);
+    element.style.display = 'none';
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
 }

@@ -21,7 +21,8 @@ async function showIdentityInformations() {
                 .catch(function (error) { console.log(error); });
 
             // assign values to elements
-            switch (type) {
+            console.log(type);
+            switch (`${type}`) {
                 case '1':
                     document.getElementById('identity-info-type').value = 'person';
                     break;
@@ -29,6 +30,7 @@ async function showIdentityInformations() {
                     document.getElementById('identity-info-type').value = 'organization';
                     break;
                 default:
+                    document.getElementById('identity-info-type').value = type;
                     break;
             }
             document.getElementById('identity-info-id').value = id;
