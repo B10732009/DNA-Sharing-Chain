@@ -1,24 +1,9 @@
-async function getMetamaskAccount() {
+async function getSignature() {
     if (typeof window.ethereum !== 'undefined') {
         try {
             const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
             const account = accounts[0];
             document.getElementById('address').value = account;
-        }
-        catch (error) {
-            console.log(error);
-        }
-    }
-    else {
-        console.log('MetaMask is not installed');
-    }
-}
-
-async function signWithMetamask() {
-    if (typeof window.ethereum !== 'undefined') {
-        try {
-            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-            const account = accounts[0];
 
             const msg = document.getElementById('message').value;
 
@@ -32,7 +17,7 @@ async function signWithMetamask() {
     }
 }
 
-async function provideCsr() {
+async function getCsr() {
     if (typeof window.ethereum !== 'undefined') {
         try {
             // get user account
@@ -75,12 +60,11 @@ async function provideCsr() {
                 method: 'eth_decrypt',
                 params: [encryptedCsr, account]
             });
-            console.log('csr =', csr);
 
             // encrypt csr with DNASSYSTEM's public key
             const appEncryptedCsr = EthSigUtil.encrypt(DID_CONFIG.ORG.PUBKEY, { data: csr }, 'x25519-xsalsa20-poly1305');
             const appEncryptedCsrString = JSON.stringify(appEncryptedCsr);
-            document.getElementById('app_encrypted_csr').value = appEncryptedCsrString;
+            document.getElementById('app-encrypted-csr').value = appEncryptedCsrString;
         }
         catch (error) {
             console.log(error);
@@ -91,12 +75,50 @@ async function provideCsr() {
     }
 }
 
-// async function temp() {
-//     let temp = await window.ethereum.request({
-//         method: 'eth_getEncryptionPublicKey',
-//         params: ["0xe092b1fa25DF5786D151246E492Eed3d15EA4dAA"]
-//     });
-//     console.log('temp = ', temp);
-// }
+async function register() {
+    const type = document.getElementById('type').value;
+    const address = document.getElementById('address').value;
+    const message = document.getElementById('message').value;
+    const signature = document.getElementById('signature').value;
+    const appEncryptedCsr = document.getElementById('app-encrypted-csr').value;
+    console.log('type =', type);
+    console.log('address =', address);
+    console.log('message =', message);
+    console.log('signature =', signature);
+    console.log('appEncryptedCsr =', appEncryptedCsr);
 
-// temp();
+    if (`${type}` == '0') {
+        alert('[APP] Please select a type.');
+        return;
+    }
+    if (!signature) {
+        alert('[APP] Please sign the message first.');
+        return;
+    }
+    if (!appEncryptedCsr) {
+        alert('[APP] Please provide your encrpyted CSR.');
+        return;
+    }
+
+    const registerRes = await fetch('/app/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            type: type,
+            address: address,
+            message: message,
+            signature: signature,
+            appEncryptedCsr: appEncryptedCsr
+        })
+    });
+    const registerResJson = await registerRes.json();
+    console.log('registerResJson =', registerResJson);
+
+    if (registerResJson.success) {
+        alert('[APP] Successfully registered.');
+        window.location.href = '/app/index';
+    }
+    else {
+        alert('[APP] Fail to register:', registerResJson.error);
+    }
+}

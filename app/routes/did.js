@@ -39,13 +39,13 @@ router.post('/register', async function (req, res) {
     try {
         // create identity manager contract instance
         const web3 = new Web3(DID_CONFIG.URL);
-        const contract = new web3.eth.Contract(IDENTITY_MANAGER_ABI, DID_CONFIG.CONTRACTS.IDENTITY_MANAGER.ADDRESS);
+        const identityManagerContract = new web3.eth.Contract(IDENTITY_MANAGER_ABI, DID_CONFIG.CONTRACTS.IDENTITY_MANAGER.ADDRESS);
 
         // create a new user
         const tx = {
             gas: 2000000,
             gasPrice: 30000000000,
-            data: contract.methods
+            data: identityManagerContract.methods
                 .createUser(hashedId, address, type)
                 .encodeABI(),
             from: DID_CONFIG.ORG.ADDRESS,
@@ -55,7 +55,7 @@ router.post('/register', async function (req, res) {
         await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
 
         // get events emitted from the contract
-        const returnValuesObject = await contract.getPastEvents('IdentityManagerEvent');
+        const returnValuesObject = await identityManagerContract.getPastEvents('IdentityManagerEvent');
         const returnValues = returnValuesObject[0].returnValues;
         console.log('[DID] returnValues =', returnValues);
         if (returnValues.status) {

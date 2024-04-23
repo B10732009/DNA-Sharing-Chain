@@ -11,24 +11,25 @@ html(lang='en')
         div.navbar
             a.navbar-item.navbar-item-left(href='/app/index') PPDNASSP
             a.navbar-item.navbar-item-right(href='/app/download') Download
+            a.navbar-item.navbar-item-right(href='/app/upload') Upload
             a.navbar-item.navbar-item-right(href='/app/manage') Manage
             a.navbar-item.navbar-item-right(href='/app/register') Register
-        form.form(action='/app/manage/update_permission' method='post')
-            h3.form-title EDIT PERMISSION
+        form.form
+            h3.form-title Edit Permission
             table.form-table
                 thead
                     tr
-                        th.form-table-item #CHROM
-                        th.form-table-item PRIVATE
-                        th.form-table-item RESTRIC I
-                        th.form-table-item RESTRIC II
-                        th.form-table-item PUBLIC
+                        th.form-table-item #chrom
+                        th.form-table-item private
+                        th.form-table-item restrict i
+                        th.form-table-item restrict ii
+                        th.form-table-item public
                     tr
                 tbody#tbody
             br
             br
-            input.form-input#address(type='text' name='address' placeholder='address')
-            input.form-input#permission(type='text' name='permission' placeholder='permission')
+            input.form-input#address(type='text' name='address' placeholder='address' hidden='')
+            input.form-input#permission(type='text' name='permission' placeholder='permission' hidden='')
             button.form-button.form-button-color(type='button' name='update' value='update permission' onclick='updatePermission(); return false;') update permission
         br
         br

@@ -11,23 +11,26 @@ html(lang='en')
         div.navbar
             a.navbar-item.navbar-item-left(href='/app/index') PPDNASSP
             a.navbar-item.navbar-item-right(href='/app/download') Download
+            a.navbar-item.navbar-item-right(href='/app/upload') Upload
             a.navbar-item.navbar-item-right(href='/app/manage') Manage
             a.navbar-item.navbar-item-right(href='/app/register') Register
-        form.form(action='/app/register' method='post')
-            h3.form-title REGISTER
+        form.form
+            h3.form-title Register
+            select.form-select#type(name='type')
+                option(value='0') -- Please Select a Type --
+                option(value='patient') Patient 
+                option(value='research_institute') Research Institute
             input.form-input#address(type='text' name='address' placeholder='address' hidden readonly='')
             input.form-input#message(type='text' name='message' placeholder='message' value='APP_REGISTER' readonly='')
             input.form-input#signature(type='text' name='signature' placeholder='signature' required readonly='')
-            button.form-button.form-metamask-button-color(type='button' onclick='getMetamaskAccount(); signWithMetamask();') sign 
+            button.form-button.form-metamask-button-color(type='button' onclick='getSignature();') sign 
             br
             br
-            input.form-input#app_encrypted_csr(type='text' name='app_encrypted_csr' placeholder='app_encrypted_csr' readonly='')
-            button.form-button.form-metamask-button-color(type='button' onclick='provideCsr();') provide
+            input.form-input#app-encrypted-csr(type='text' name='app_encrypted_csr' placeholder='app_encrypted_csr' readonly='')
+            button.form-button.form-metamask-button-color(type='button' onclick='getCsr();') provide
             br
             br
-            input.form-button.form-button-color(type='submit' name='register' value='register' onclick='return true;')
-        form.form(action='/app/test' method='post')
-            input.form-button.form-button-color(type='submit' name='register' value='register' onclick='return true;')
+            button.form-button.form-button-color(type='button' onclick='register();') register
         br
         br
         br

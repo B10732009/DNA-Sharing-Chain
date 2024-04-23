@@ -11,7 +11,7 @@ class AccessControlContract extends Contract {
         // function that will be invoked on chaincode instantiation
     }
 
-    async createUser(ctx, address, role) {
+    async createUser(ctx, address, role, level) {
         const userInfo = { role: role };
         if (role == 'patient') {
             userInfo.permission = {
@@ -21,16 +21,22 @@ class AccessControlContract extends Contract {
                 chr19: 0, chr20: 0, chr21: 0, chr22: 0, chr23: 0, chr24: 0
             }
         }
+        else {
+            userInfo.level = level;
+        }
         await ctx.stub.putState(address, Buffer.from(JSON.stringify(userInfo)));
-        return { success: 'OK' };
+        return { success: 'ok' };
     }
 
     async updatePermission(ctx, address, newPermission) {
         const buffer = await ctx.stub.getState(address);
         if (!buffer || !buffer.length) {
-            return { error: 'NOT_FOUND' };
+            return { error: 'not found' };
         }
         let userInfo = JSON.parse(buffer.toString());
+        if (userInfo.role != 'patient') {
+            return { error: 'only patient can update permission' };
+        }
         userInfo.permission = JSON.parse(newPermission);
         await ctx.stub.putState(address, Buffer.from(JSON.stringify(userInfo)));
         return { success: 'OK' };
@@ -39,11 +45,11 @@ class AccessControlContract extends Contract {
     async getPermission(ctx, address) {
         const buffer = await ctx.stub.getState(address);
         if (!buffer || !buffer.length) {
-            return { error: 'NOT_FOUND' };
+            return { error: 'not found' };
         }
         const userInfo = JSON.parse(buffer);
         if (userInfo.role != 'patient') {
-            return { error: 'NOT_A_PATIENT' };
+            return { error: 'only patient can get permission' };
         }
         return { success: 'ok', data: userInfo.permission };
     }
@@ -55,6 +61,27 @@ class AccessControlContract extends Contract {
             permissions.push(queryResult);
         }
         return { success: 'ok', data: permissions };
+    }
+
+    async getLevel(ctx, address) {
+        const buffer = await ctx.stub.getState(address);
+        if (!buffer || !buffer.length) {
+            return { error: 'not found' };
+        }
+        const userInfo = JSON.parse(buffer);
+        if (userInfo.role != 'research_institute') {
+            return { error: 'only research institute can get level' };
+        }
+        return { success: 'ok', data: userInfo.level };
+    }
+
+    async getRole(ctx, address) {
+        const buffer = await ctx.stub.getState(address);
+        if (!buffer || !buffer.length) {
+            return { error: 'not found' };
+        }
+        const userInfo = JSON.parse(buffer);
+        return { success: 'ok', data: userInfo.role };
     }
 
     async put(ctx, key, value) {

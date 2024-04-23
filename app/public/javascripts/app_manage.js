@@ -3,20 +3,18 @@ let permission = {};
 async function createTable() {
     // create table
     const tbody = document.getElementById('tbody');
-    for (let i = 0; i < 23; i++) {
+    for (let i = 1; i <= 24; i++) {
         const row = tbody.insertRow();
         for (let j = 0; j < 5; j++) {
             const cell = row.insertCell(j);
             if (j == 0) {
-                cell.innerText = `#CHR${i + 1}`;
+                cell.innerText = `#CHR${i}`;
             }
             else {
                 const button = document.createElement('button');
                 button.setAttribute('id', `button-${i}-${j}`);
                 button.setAttribute('class', 'form-button form-table-button-color');
-                console.log(permission);
-                console.log(permission[`chr${i + 1}`]);
-                if (j - 1 == permission[`chr${i + 1}`]) {
+                if (j - 1 == permission[`chr${i}`]) {
                     button.setAttribute('class', 'form-button form-table-button-selected-color');
                 }
                 else {
@@ -33,7 +31,6 @@ async function createTable() {
 function setPermission(i, j) {
     // update permission list
     permission[`chr${i}`] = j - 1;
-    console.log(permission);
 
     // update table button color
     for (let k = 1; k < 5; k++) {
@@ -146,7 +143,13 @@ async function updatePermission() {
                 })
             });
             const sendCommitResJson = await sendCommitRes.json();
-            console.log(sendCommitResJson.data);
+            console.log('sendCommitResJson.data =', sendCommitResJson.data);
+            if (sendCommitResJson.data.status == 'SUCCESS') {
+                alert('[APP] Successfully updated permission');
+            }
+            else {
+                alert('[APP] Fail to update permission:', sendCommitResJson.data.info);
+            }
         }
         catch (error) {
             console.log(error);
@@ -169,7 +172,7 @@ async function init() {
             });
             const resJson = await res.json();
             permission = resJson.data;
-            console.log(permission);
+            console.log('permission =', permission);
             createTable();
         }
         catch (error) {
@@ -182,4 +185,3 @@ async function init() {
 }
 
 init();
-// createTable();

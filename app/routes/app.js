@@ -318,52 +318,71 @@ router.post('/test', async function (req, res) {
 });
 
 router.post('/register', async function (req, res) {
+    const type = req.body.type;
     const address = req.body.address;
     const message = req.body.message;
     const signature = req.body.signature;
-    const appEncryptedCsr = req.body.app_encrypted_csr;
-    console.log(address);
-    console.log(message);
-    console.log(signature);
-    console.log(appEncryptedCsr);
-    try {
-        // const identityChainConfigPath = path.join(__dirname, '..', '..', 'config', 'identity_chain_config.json');
-        // const identityChainConfig = JSON.parse(fs.readFileSync(identityChainConfigPath));
+    const appEncryptedCsr = req.body.appEncryptedCsr;
+    console.log('[APP] type =', type);
+    console.log('[APP] address =', address);
+    console.log('[APP] message =', message);
+    console.log('[APP] signature =', signature);
+    console.log('[APP] appEncryptedCsr =', appEncryptedCsr);
 
+    try {
         // verify signature
         const web3 = new Web3(DID_CONFIG.URL);
         const recoveredAddress = web3.eth.accounts.recover(message, signature);
+        console.log('[APP] recoveredAddress.toLowerCase() =', recoveredAddress.toLowerCase());
         if (recoveredAddress.toLowerCase() != address.toLowerCase()) {
-            console.log("Fail to verify the signature.");
-            console.log(recoveredAddress, address);
-            res.redirect('/app/register');
+            console.log('[APP] Fail to verify the signature.');
+            res.send({ error: 'Fail to verify the signature.' });
             return;
         }
-        console.log("Successfully verified the signature.");
+        console.log('[APP] Successfully verified the signature.');
+
+        // verify type
+        const identityManagerContract = new web3.eth.Contract(IDENTITY_MANAGER_ABI, DID_CONFIG.CONTRACTS.IDENTITY_MANAGER.ADDRESS);
+        const didType = await identityManagerContract.methods.getUserType(address)
+            .call({ from: address })
+            .catch(function (error) { console.log(error); });
+        if ((`${didType}` == '1' && type != 'patient') || (`${didType}` == 2 && type != 'research_institute')) {
+            console.log('[APP] Did type error.');
+            res.send({ error: 'Did type error.' });
+        }
 
         // decrypt csr
         const csr = EthSigUtil.decrypt(JSON.parse(appEncryptedCsr), DID_CONFIG.ORG.PRVKEY);
-        console.log(csr);
+        console.log('[APP] csr =', csr);
 
         // decode csr and retrieve common name
         const decodedCsr = await decodeCsr(csr);
         const decodeCsrMatches = decodedCsr.match(/CN\s*=\s*([^\n]+)/);
         const cn = decodeCsrMatches[1];
-        console.log('cn =', cn);
+        console.log('[APP] cn =', cn);
+
+        // get admin user
+        const adminIdentity = await wallet.get(adminUserId);
+        if (!adminIdentity) {
+            console.log('[APP] Fail to find admin user in wallet.');
+            res.send({ error: 'Fail to find admin user in wallet.' });
+            return;
+        }
+        const adminUser = await wallet.getProviderRegistry()
+            .getProvider(adminIdentity.type)
+            .getUserContext(adminIdentity, adminUserId);
 
         // register a new user with provided csr
-        const adminUser = await getAdminIdentity(caClient, wallet);
         const secret = await caClient.register({
             affiliation: null,
             attrs: [{
                 name: 'category',
-                value: 'ghwoghgoqghoghghoghsglahsagh',
+                value: 'governmentPeerNode',
                 ecert: true
             }],
             enrollmentID: cn,
             role: 'client'
         }, adminUser);
-
         const enrollment = await caClient.enroll({
             enrollmentID: cn,
             enrollmentSecret: secret,
@@ -377,13 +396,18 @@ router.post('/register', async function (req, res) {
             type: 'X.509',
         };
         await wallet.put(address, x509Identity);
-        console.log('Successfully create new user in the wallet');
+        console.log('[APP] Successfully created a new user in the wallet');
 
         // create a new user object on app chain
-        const createUserResult = await accessControlContract.submitTransaction('createUser', address, 'patient');
-        console.log(createUserResult);
-
-        res.redirect('/app/index');
+        const createUserResult = await accessControlContract.submitTransaction('createUser', address, type, '3');
+        const createUserResultJson = JSON.parse(createUserResult.toString());
+        console.log('[APP] createUserResultJson =', createUserResultJson);
+        if (createUserResultJson.success) {
+            res.send({ success: 'ok' });
+        }
+        else {
+            res.send({ error: 'error' });
+        }
     }
     catch (error) {
         console.log(error);
@@ -504,8 +528,8 @@ router.post('/manage/update_permission/get_endorsement', async function (req, re
     // get user's address and permission
     const address = req.body.address;
     const permission = req.body.permission;
-    console.log('address =', address);
-    console.log('permission =', permission);
+    console.log('[APP] address =', address);
+    console.log('[APP] permission =', permission);
 
     // get user info from local wallet
     const userJson = await wallet.get(address);
@@ -532,13 +556,13 @@ router.post('/manage/update_permission/get_commit', async function (req, res) {
     // get user's address and signed proposal
     const address = req.body.address;
     const endorsementSignatureDer = req.body.endorsementSignatureDer;
-    console.log('address =', address);
-    console.log('endorsementSignatureDer =', endorsementSignatureDer);
+    console.log('[APP] address =', address);
+    console.log('[APP] endorsementSignatureDer =', endorsementSignatureDer);
 
     // form endorsor object, and send it
     offlineSigningEndorsement.sign(Buffer.from(endorsementSignatureDer));
     const proposalResponse = await offlineSigningEndorsement.send({ targets: accessControlChannel.channel.getEndorsers() });
-    console.log('proposalResponse =', proposalResponse);
+    console.log('[APP] proposalResponse =', proposalResponse);
 
     const userJson = await wallet.get(address);
     const user = FabricCommon.User.createUser(address, null, userJson.mspId, userJson.credentials.certificate, null);
@@ -560,7 +584,7 @@ router.post('/manage/update_permission/get_commit', async function (req, res) {
 router.post('/manage/update_permission/send_commit', async function (req, res) {
     // get user's signed commit
     const commitSignatureDer = req.body.commitSignatureDer;
-    console.log('commitSignature =', commitSignatureDer);
+    console.log('[APP] commitSignature =', commitSignatureDer);
 
     // form commiter object, and send it
     offlineSigningCommit.sign(Buffer.from(commitSignatureDer));
@@ -568,7 +592,7 @@ router.post('/manage/update_permission/send_commit', async function (req, res) {
         requestTimeout: 300000,
         targets: accessControlChannel.channel.getCommitters()
     });
-    console.log(commitResponse);
+    console.log('[APP] commitResponse =', commitResponse);
 
     // send the result to client side
     res.send({ data: commitResponse });
