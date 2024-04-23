@@ -1,4 +1,4 @@
-async function showIdentityInformations() {
+async function getInfos() {
     if (typeof window.ethereum !== 'undefined') {
         try {
             // get user account
@@ -21,7 +21,6 @@ async function showIdentityInformations() {
                 .catch(function (error) { console.log(error); });
 
             // assign values to elements
-            console.log(type);
             switch (`${type}`) {
                 case '1':
                     document.getElementById('identity-info-type').value = 'person';
@@ -30,7 +29,7 @@ async function showIdentityInformations() {
                     document.getElementById('identity-info-type').value = 'organization';
                     break;
                 default:
-                    document.getElementById('identity-info-type').value = type;
+                    document.getElementById('identity-info-type').value = `${type}`;
                     break;
             }
             document.getElementById('identity-info-id').value = id;
@@ -94,7 +93,7 @@ async function uploadEncryptedData() {
                 const data = event.target.result; // content of the file
                 const encryptedData = EthSigUtil.encrypt(encryptionPublicKey, { data: data }, 'x25519-xsalsa20-poly1305');
                 const encryptedDataString = JSON.stringify(encryptedData);
-                console.log(encryptedDataString);
+                console.log('encryptedDataString =', encryptedDataString);
 
                 // upload to user's identity contract
                 const addDataResult = await identityContract.methods.addData(name, encryptedDataString, hashedMsg, v, r, s)
@@ -108,7 +107,14 @@ async function uploadEncryptedData() {
                 // get events emitted from the contract
                 const returnValuesObject = await identityContract.getPastEvents('IdentityEvent');
                 const returnValues = returnValuesObject[0].returnValues;
-                console.log(returnValues);
+                console.log('returnValues =', returnValues);
+
+                if (returnValues.status) {
+                    alert('[DID] Successfully encrypted and uploaded data.');
+                }
+                else {
+                    alert('[DID] Fail to encrypt and upload data:', returnValues.msg);
+                }
             }
         }
         catch (error) {
@@ -160,7 +166,6 @@ async function downloadEncryptedData() {
             const encryptedDataString = await identityContract.methods.getData(name, hashedMsg, v, r, s)
                 .call({ from: account })
                 .catch(function (error) { console.log(error); });
-            console.log(encryptedDataString);
 
             // decrypt data
             const data = await window.ethereum.request({

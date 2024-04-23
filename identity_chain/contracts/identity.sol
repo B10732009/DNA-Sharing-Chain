@@ -2,7 +2,7 @@
 pragma solidity ^0.8.13;
 
 contract Identity {
-	event IdentityEvent(bool _status, string _msg);
+	event IdentityEvent(bool status, string msg);
 	
 	address owner;
 	mapping(string => string) data;

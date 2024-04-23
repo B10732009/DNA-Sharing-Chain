@@ -10,30 +10,30 @@ html(lang='en')
     body
         div.navbar
             a.navbar-item.navbar-item-left(href='/did/index') DID 
-            a.navbar-item.navbar-item-right(href='/did/manage') Manage Identity
-            a.navbar-item.navbar-item-right(href='/did/register') Register Identity
+            a.navbar-item.navbar-item-right(href='/did/manage') Manage
+            a.navbar-item.navbar-item-right(href='/did/register') Register
         form.form
             h3.form-title Identity Infos
-            input.form-input#identity-info-type(type='text' name='id' placeholder='id number / org number' required='' readonly='')
+            input.form-input#identity-info-type(type='text' name='type' placeholder='type' required='' readonly='')
             input.form-input#identity-info-id(type='text' name='id' placeholder='id number / org number' required='' readonly='')
             input.form-input#identity-info-identity-contract-address(type='text' name='identity-contract-address' placeholder='identity-contract-address' required='' readonly='')
-            input.form-button.form-button-color(type='submit' name='show' value='show' onclick='showIdentityInformations(); return false;')
+            button.form-button.form-button-color(type='button' onclick='getInfos();') show
         form.form
-            h3.form-title Upload Data
+            h3.form-title Upload Encrypted Data
             input.form-input#upload-encrypted-data-name(type='text' name='name' placeholder='name' required='')
             input.form-input#upload-encrypted-data-data(type='file' name='data' placeholder='data' required='')
-            input.form-button.form-button-color(type='submit' name='upload' value='encrypt & upload' onclick='uploadEncryptedData(); return false;')
+            button.form-button.form-button-color(type='button' onclick='uploadEncryptedData();') encrypt & upload
         form.form
-            h3.form-title Download Data
+            h3.form-title Download Encrypted Data
             input.form-input#download-encrypted-data-name(type='text' name='name' placeholder='name' required='')
             input.form-input#download-encrypted-data-data(type='text' name='data' placeholder='data' required='')
-            input.form-button.form-button-color(type='submit' name='download' value='download & decrypt' onclick='downloadEncryptedData(); return false;')
+            button.form-button.form-button-color(type='button' onclick='downloadEncryptedData();') download & decrypt
         br
         br
         br 
     script(src='../javascripts/web3.bundle.js')
     script(src='../javascripts/eth_sig_util.bundle.js')
-    script(src='../javascripts/did_manage.js')
     script(src='../javascripts/IdentityManager.abi.js')
     script(src='../javascripts/Identity.abi.js')
     script(src='../javascripts/did_config.js')
+    script(src='../javascripts/did_manage.js')

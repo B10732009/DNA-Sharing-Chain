@@ -25,10 +25,10 @@ router.post('/register', async function (req, res) {
     const id = req.body.id;
     const address = req.body.address;
     const type = req.body.type;
-    console.log('[DID] create user...');
     console.log('[DID] id =', id);
     console.log('[DID] address =', address);
     console.log('[DID] type =', type);
+    console.log('[DID] create user...');
 
     // government api
     // create an unique id for user
@@ -57,9 +57,13 @@ router.post('/register', async function (req, res) {
         // get events emitted from the contract
         const returnValuesObject = await contract.getPastEvents('IdentityManagerEvent');
         const returnValues = returnValuesObject[0].returnValues;
-        console.log(returnValues);
-
-        res.redirect('/did/index');
+        console.log('[DID] returnValues =', returnValues);
+        if (returnValues.status) {
+            res.send({ success: 'ok' });
+        }
+        else {
+            res.send({ error: returnValues.msg });
+        }
     }
     catch (error) {
         console.log(error);

@@ -10,18 +10,18 @@ html(lang='en')
     body
         div.navbar
             a.navbar-item.navbar-item-left(href='/did/index') DID
-            a.navbar-item.navbar-item-right(href='/did/manage') Manage Identity
-            a.navbar-item.navbar-item-right(href='/did/register') Register Identity
+            a.navbar-item.navbar-item-right(href='/did/manage') Manage
+            a.navbar-item.navbar-item-right(href='/did/register') Register
         form.form(action='/did/register' method='post')
             h3.form-title Register a New Identity
             select.form-select#type(name='type')
                 option(value='0') -- Please Select a Type --
                 option(value='1') Person 
-                option(value='2') organization
-            input.form-input#id(type='text' name='id' placeholder='id number / org number' required='')
+                option(value='2') Organization
+            input.form-input#id(type='text' name='id' placeholder='id number / organization number' required='')
             input.form-input#address(type='text' name='address' placeholder='address' required='' readonly='')
-            button.form-button.form-metamask-button-color(type='button' onclick='getMetamaskAccount();') get metamask account
-            input.form-button.form-button-color(type='submit' name='register' value='register' onclick='return true;')
+            button.form-button.form-metamask-button-color(type='button' onclick='getAddress();') get metamask account
+            button.form-button.form-button-color(type='button' onclick='register();') register
         br
         br
         br
