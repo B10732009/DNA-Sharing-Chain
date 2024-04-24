@@ -55,6 +55,6 @@ async function register() {
         window.location.href = '/did/index';
     }
     else {
-        alert('[DID] Fail to create a new identity:', registerResJson.error);
+        alert(`[DID] Fail to create a new identity: ${registerResJson.error}`);
     }
 }

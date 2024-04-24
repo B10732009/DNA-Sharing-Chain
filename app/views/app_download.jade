@@ -7,39 +7,38 @@ html(lang='en')
         link(rel='stylesheet' type='text/css' href='../stylesheets/navbar.css')
         link(rel='stylesheet' type='text/css' href='../stylesheets/form.css')
         title PPDNASSP
+    body
+        div.navbar
+            a.navbar-item.navbar-item-left(href='/app/index') PPDNASSP
+            a.navbar-item.navbar-item-right(href='/app/download') Download
+            a.navbar-item.navbar-item-right(href='/app/upload') Upload
+            a.navbar-item.navbar-item-right(href='/app/manage') Manage
+            a.navbar-item.navbar-item-right(href='/app/register') Register
+        form.form
+            h3.form-title Query DNA Sequences
+            input.form-input#address(type='text' name='address' placeholder='address' hidden readonly='')
+            input.form-input#message(type='text' name='message' placeholder='message' value='APP_DOWNLOAD_DATA' readonly='')
+            input.form-input#signature(type='text' name='signature' placeholder='signature' required readonly='')
+            button.form-button.form-metamask-button-color(type='button' onclick='getSignature();') sign 
+            br
+            br
+            input.form-input#chrom-ranges(type='text' name='chrom_ranges' placeholder='chrom_ranges')
+            button.form-button.form-button-color(type='button' onclick='query();') query
+        form.form
+            h3.form-title Download DNA Sequences
+            table.form-table
+                thead
+                    tr
+                        th.form-table-item #id
+                        th.form-table-item file
+                    tr
+                tbody#tbody
+        br
+        br
+        br
     script(src='../javascripts/web3.bundle.js')
     script(src='../javascripts/eth_sig_util.bundle.js')
     script(src='../javascripts/IdentityManager.abi.js')
     script(src='../javascripts/Identity.abi.js')
     script(src='../javascripts/did_config.js')
     script(src='../javascripts/app_download.js')
-    body
-        div.navbar
-            a.navbar-item.navbar-item-left(href='/app/index') PPDNASSP
-            a.navbar-item.navbar-item-right(href='/app/download') Download
-            a.navbar-item.navbar-item-right(href='/app/manage') Manage
-            a.navbar-item.navbar-item-right(href='/app/register') Register
-        form.form(action='/app/download' method='post')
-            h3.form-title Download Data
-            input.form-input#address(type='text' name='address' placeholder='address' hidden readonly='')
-            input.form-input#message(type='text' name='message' placeholder='message' value='PPDNASSP_DOWNLOAD_DATA' readonly='')
-            input.form-input#signature(type='text' name='signature' placeholder='signature' required readonly='')
-            button.form-button.form-metamask-button-color(type='button' onclick='getMetamaskAccount(); signWithMetamask();') sign 
-            br
-            br
-            input.form-input#chrom(type='text' name='chrom' placeholder='chrom')
-            input.form-input#tags(type='text' name='tag' placeholder='tag')
-            button.form-button.form-button-color(type='button' name='register' value='register' onclick='download(); return false;')
-        form.form(action='/app/download' method='post')
-            h3.form-title Available Data
-            table#available-data-table.form-table
-                thead
-                    tr
-                        th.form-table-item #ID
-                        th.form-table-item FILE
-                    tr
-                tbody#tbody
-        br
-        br
-        br
-    

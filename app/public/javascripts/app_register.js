@@ -119,6 +119,6 @@ async function register() {
         window.location.href = '/app/index';
     }
     else {
-        alert('[APP] Fail to register:', registerResJson.error);
+        alert(`[APP] Fail to register: ${registerResJson.error}`);
     }
 }

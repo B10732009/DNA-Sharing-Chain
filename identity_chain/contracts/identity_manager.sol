@@ -35,7 +35,7 @@ contract IdentityManager {
 			emit IdentityManagerEvent(false, "this address has been used.");
 			return;
 		}
-		if (_userType != 0 && _userType != 1) {
+		if (_userType != 1 && _userType != 2) {
 			emit IdentityManagerEvent(false, "invalid user type.");
 			return;
 		}

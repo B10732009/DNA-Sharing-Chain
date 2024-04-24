@@ -1,24 +1,9 @@
-async function getMetamaskAccount() {
+async function getSignature() {
     if (typeof window.ethereum !== 'undefined') {
         try {
             const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
             const account = accounts[0];
             document.getElementById('address').value = account;
-        }
-        catch (error) {
-            console.log(error);
-        }
-    }
-    else {
-        console.log('MetaMask is not installed');
-    }
-}
-
-async function signWithMetamask() {
-    if (typeof window.ethereum !== 'undefined') {
-        try {
-            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-            const account = accounts[0];
 
             const msg = document.getElementById('message').value;
             console.log('msg =', msg);
@@ -34,12 +19,15 @@ async function signWithMetamask() {
     }
 }
 
-async function download() {
+async function query() {
     const address = document.getElementById('address').value;
     const message = document.getElementById('message').value;
     const signature = document.getElementById('signature').value;
-    const chrom = document.getElementById('chrom').value;
-    const tags = document.getElementById('tags').value;
+    const chromRanges = document.getElementById('chrom-ranges').value;
+    console.log('address =', address);
+    console.log('message =', message);
+    console.log('signature =', signature);
+    console.log('chromRanges =', chromRanges);
 
     // get query result
     const downloadRes = await fetch('/app/download', {
@@ -49,8 +37,7 @@ async function download() {
             address: address,
             message: message,
             signature: signature,
-            chrom: chrom,
-            tags:tags
+            chromRanges: chromRanges
         })
     });
     const downloadResJson = await downloadRes.json();
@@ -71,16 +58,16 @@ async function download() {
         button.innerText = 'download';
         button.setAttribute('class', 'form-button form-table-button-selected-color');
         button.setAttribute('type', 'button');
-        button.setAttribute('onclick', `downloadFile('${item.key}.vcf', '${item.value}'); return false;`);
+        button.setAttribute('onclick', `download('${item.key}.vcf', '${item.value}'); return false;`);
         cell1.appendChild(button);
     }
 
 
     console.log('downloadResJson =', downloadResJson);
-    
+
 }
 
-async function downloadFile(fileName, fileContent) {
+async function download(fileName, fileContent) {
     let element = document.createElement('a');
     element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(fileContent));
     element.setAttribute('download', fileName);

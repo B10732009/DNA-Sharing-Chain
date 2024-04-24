@@ -349,6 +349,7 @@ router.post('/register', async function (req, res) {
         if ((`${didType}` == '1' && type != 'patient') || (`${didType}` == 2 && type != 'research_institute')) {
             console.log('[APP] Did type error.');
             res.send({ error: 'Did type error.' });
+            return;
         }
 
         // decrypt csr
@@ -604,8 +605,10 @@ router.get('/upload', async function (req, res, next) {
 
 router.post('/upload', async function (req, res) {
     // get data owner's id and data
-    const id = req.body.dna_owner_id;
-    const data = req.body.dna_owner_data;
+    const id = req.body.id;
+    const data = req.body.data;
+    console.log('[APP] id =', id);
+    console.log('[APP] data =', data);
 
     // get hashed id
     const hashedId = crypto.createHash('sha256')
@@ -613,19 +616,25 @@ router.post('/upload', async function (req, res) {
         .digest('hex');
 
     // separate header part and record part
-    const dataLines = data.split(/\r\n/);
+    const dataLines = data.split(/\n/g);
     const headers = dataLines.filter(function (dataLine) { return dataLine[0] == '#'; });
     const records = dataLines.filter(function (dataLine) { return dataLine[0] != '#'; });
+    console.log('[APP] headers =', headers);
+    console.log('[APP] records =', records);
 
     // insert data into database
     db.serialize(function () {
         db.run('INSERT INTO header VALUES(?,?)', [hashedId, headers.join('\r\n')]);
         for (const record of records) {
-            const items = record.split(/\s+/);
+            const items = record.split(/\t/g);
+            console.log('[APP] items =', items);
             db.run('INSERT INTO gene VALUES(?,?,?,?,?,?,?,?,?,?)',
                 [hashedId, items[0], items[1], items[2], items[3], items[4], items[5], items[6], items[7], items.slice(8).join('\t')]);
         }
+        console.log('[APP] Finish inserting data to database.');
     });
+
+    res.send({ success: 'ok' });
 });
 
 router.get('/download', async function (req, res, next) {
@@ -637,7 +646,11 @@ router.post('/download', async function (req, res) {
     const address = req.body.address;
     const message = req.body.message;
     const signature = req.body.signature;
-    const chromRanges = req.body.chrom;
+    const chromRanges = req.body.chromRanges;
+    console.log('[APP] address =', address);
+    console.log('[APP] message =', message);
+    console.log('[APP] signature =', signature);
+    console.log('[APP] chromRanges =', chromRanges);
 
     // verify signature with message
     const web3 = new Web3(DID_CONFIG.URL);
@@ -649,8 +662,16 @@ router.post('/download', async function (req, res) {
         return;
     }
 
-    const contract = new web3.eth.Contract(IDENTITY_MANAGER_ABI, DID_CONFIG.CONTRACTS.IDENTITY_MANAGER.ADDRESS);
-    const level = 2;
+    // get research institute's level
+    const getLevelRes = await accessControlContract.evaluateTransaction('getLevel', address);
+    const getLevelResJson = JSON.parse(getLevelRes.toString());
+    if (getLevelResJson.error) {
+        console.log('[APP] Fail to get level:', getLevelResJson.error);
+        res.send({ error: getLevelResJson.error });
+        return;
+    }
+    const level = parseInt(getLevelResJson.data);
+    console.log('[APP] level =', level);
 
     // create a array containing all target chroms
     let chroms = [];
@@ -672,7 +693,7 @@ router.post('/download', async function (req, res) {
         }
     };
     for (const chrom of chroms) {
-        query.selector.permission[chrom] = { '$lt': level };
+        query.selector.permission[chrom] = { '$lt': level + 1 };
     }
 
     // query permission from app chain
@@ -680,15 +701,21 @@ router.post('/download', async function (req, res) {
     const queryResult = JSON.parse(queryResultBuffer.toString());
 
     // query data from database
+    const identityManagerContract = new web3.eth.Contract(IDENTITY_MANAGER_ABI, DID_CONFIG.CONTRACTS.IDENTITY_MANAGER.ADDRESS);
     for (let i = 0; i < queryResult.data.length; i++) {
         // get user (hashed) id
-        const userId = await contract.methods.getUserId(queryResult.data[i].key)
+        const userId = await identityManagerContract.methods.getUserId(queryResult.data[i].key)
             .call({ from: queryResult.data[i].key })
             .catch(function (error) { console.log(error); });
+        console.log('[APP] userId =', userId);
+
+        queryResult.data[i].key = userId;
 
         // query data of current target user
         const headerObject = await dbAll('SELECT * FROM header WHERE user_id = ?', [userId]);
         const recordObject = await dbAll(`SELECT * FROM gene WHERE user_id = ? AND chrom IN (?${',?'.repeat(chroms.length - 1)})`, [userId].concat(chroms));
+        console.log('[APP] headerObject =', headerObject);
+        console.log('[APP] recordObject =', recordObject);
 
         // build file text
         queryResult.data[i].value = '';
@@ -710,6 +737,7 @@ router.post('/download', async function (req, res) {
         queryResult.data[i].value = queryResult.data[i].value.replace(/"/g, '\\"')
             .replace(/\r/g, '\\r')
             .replace(/\n/g, '\\n');
+        console.log('[APP] queryResult.data[i].value =', queryResult.data[i].value);
     }
 
     // send data back to front end
