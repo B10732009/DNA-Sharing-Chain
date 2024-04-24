@@ -16,46 +16,55 @@ const DID_CONFIG = require('../public/javascripts/did_config');
 const IDENTITY_MANAGER_ABI = require('../public/javascripts/IdentityManager.abi');
 const IDENTITY_ABI = require('../public/javascripts/Identity.abi');
 
+//=== app chain initialization ===//
 
-function buildCcp(_ccpPath) {
-    if (!fs.existsSync(_ccpPath)) {
-        throw new Error(`no such file or directory: ${_ccpPath}`);
+const channelName = 'access-control-channel';
+const chaincodeName = 'access-control-chaincode';
+const mspOrg1 = 'Org1MSP';
+const org1UserId = 'governmentPeerNode';
+const adminUserId = 'admin';
+const adminUserPasswd = 'adminpw';
+let caClient;
+let wallet;
+let gateway;
+let accessControlChannel;
+let accessControlContract;
+let offlineSigningEndorsement;
+let offlineSigningCommit;
+
+async function initAppChain() {
+    // build CCP
+    const ccpPath = path.join(__dirname, '..', '..', 'app_chain', 'fablo-target', 'fabric-config', 'connection-profiles', 'connection-profile-org1.json');
+    if (!fs.existsSync(ccpPath)) {
+        throw new Error(`no such file or directory: ${ccpPath}`);
     }
-    const contents = fs.readFileSync(_ccpPath, 'utf8');
-    const ccp = JSON.parse(contents);
-    console.log(`Loaded the network configuration located at ${_ccpPath}`);
-    return ccp;
-}
+    const ccpContent = fs.readFileSync(ccpPath, 'utf8');
+    const ccp = JSON.parse(ccpContent);
+    console.log(`[APP] Loaded the network configuration located at ${ccpPath}.`);
 
-async function buildWallet(_wallets, _walletPath) {
-    let wallet;
-    if (_walletPath) {
-        wallet = await Wallets.newFileSystemWallet(_walletPath);
-        console.log(`Built a file system wallet at ${_walletPath}`);
-    } else {
+    // build CA client
+    const caHostName = 'ca.org1.example.com';
+    const caInfo = ccp.certificateAuthorities[caHostName];
+    caClient = new FabricCaServices(caInfo.url, { verify: false }, caInfo.caName);
+    console.log(`[APP] Built a CA Client named ${caInfo.caName}.`);
+
+    // create a wallet
+    const walletPath = path.join(__dirname, 'wallet');
+    if (walletPath) {
+        wallet = await Wallets.newFileSystemWallet(walletPath);
+        console.log(`[APP] Built a file system wallet at ${walletPath}.`);
+    }
+    else {
         wallet = await Wallets.newInMemoryWallet();
-        console.log('Built an in memory wallet');
+        console.log(`[APP] Built an in memory wallet.`);
     }
-    return wallet;
-}
 
-function buildCaClient(_fabricCaServices, _ccp, _caHostName) {
-    const caInfo = _ccp.certificateAuthorities[_caHostName];
-    const caClient = new _fabricCaServices(caInfo.url, { verify: false }, caInfo.caName);
-    console.log(`Built a CA Client named ${caInfo.caName}`);
-    return caClient;
-}
-
-async function enrollAdmin(_caClient, _wallet, _orgMspId) {
-    try {
-        // Check to see if we've already enrolled the admin user.
-        const identity = await _wallet.get(adminUserId);
-        if (identity) {
-            console.log('An identity for the admin user already exists in the wallet');
-            return;
-        }
-        // Enroll the admin user, and import the new identity into the wallet.
-        const enrollment = await _caClient.enroll({
+    // enroll administrator
+    if (await wallet.get(adminUserId)) {
+        console.log('[APP] An identity for the admin user already exists in the wallet.');
+    }
+    else {
+        const enrollment = await caClient.enroll({
             enrollmentID: adminUserId,
             enrollmentSecret: adminUserPasswd
         });
@@ -64,43 +73,32 @@ async function enrollAdmin(_caClient, _wallet, _orgMspId) {
                 certificate: enrollment.certificate,
                 privateKey: enrollment.key.toBytes(),
             },
-            mspId: _orgMspId,
+            mspId: mspOrg1,
             type: 'X.509',
         };
-        await _wallet.put(adminUserId, x509Identity);
-        console.log('Successfully enrolled admin user and imported it into the wallet');
-    } catch (error) {
-        console.error(`Failed to enroll admin user : ${error}`);
+        await wallet.put(adminUserId, x509Identity);
+        console.log('[APP] Successfully enrolled admin user and imported it into the wallet.');
     }
-}
 
-async function registerAndEnrollUser(_caClient, _wallet, _orgMsgId, _userId) {
-    try {
-        // Check to see if we've already enrolled the user
-        const userIdentity = await _wallet.get(_userId);
-        if (userIdentity) {
-            console.log(`An identity for the user ${_userId} already exists in the wallet`);
-            return;
-        }
-        // Must use an admin to register a new user
-        const adminIdentity = await _wallet.get(adminUserId);
-        if (!adminIdentity) {
-            console.log('An identity for the admin user does not exist in the wallet');
-            console.log('Enroll the admin user before retrying');
-            return;
-        }
-        // build a user object for authenticating with the CA
-        const provider = _wallet.getProviderRegistry().getProvider(adminIdentity.type);
-        const adminUser = await provider.getUserContext(adminIdentity, adminUserId);
-        // Register the user, enroll the user, and import the new identity into the wallet.
-        // if affiliation is specified by client, the affiliation value must be configured in CA
-        const secret = await _caClient.register({
+    // register and enroll goverment peer node
+    if (await wallet.get(org1UserId)) {
+        console.log(`[APP] An identity for the user {${org1UserId}} already exists in the wallet.`);
+    }
+    else {
+        // create a admin user object for registering
+        const adminIdentity = await wallet.get(adminUserId);
+        const adminUser = await wallet.getProviderRegistry()
+            .getProvider(adminIdentity.type)
+            .getUserContext(adminIdentity, adminUserId);
+
+        // register and enroll user
+        const secret = await caClient.register({
             affiliation: null, // affiliation,
-            enrollmentID: _userId,
+            enrollmentID: org1UserId,
             role: 'client'
         }, adminUser);
-        const enrollment = await _caClient.enroll({
-            enrollmentID: _userId,
+        const enrollment = await caClient.enroll({
+            enrollmentID: org1UserId,
             enrollmentSecret: secret
         });
         const x509Identity = {
@@ -108,56 +106,15 @@ async function registerAndEnrollUser(_caClient, _wallet, _orgMsgId, _userId) {
                 certificate: enrollment.certificate,
                 privateKey: enrollment.key.toBytes(),
             },
-            mspId: _orgMsgId,
+            mspId: mspOrg1,
             type: 'X.509',
         };
-        await _wallet.put(_userId, x509Identity);
-        console.log(`Successfully registered and enrolled user ${_userId} and imported it into the wallet`);
-    } catch (error) {
-        console.error(`Failed to register user : ${error}`);
+        await wallet.put(org1UserId, x509Identity);
+        console.log(`[APP] Successfully registered and enrolled user {${org1UserId}} and imported it into the wallet.`);
     }
-}
 
-async function getAdminIdentity(_caClient, _wallet) {
-    const adminIdentity = await wallet.get('admin');
-    if (!adminIdentity) {
-        console.log('aaaaa');
-        return;
-    }
-    const provider = wallet.getProviderRegistry()
-        .getProvider(adminIdentity.type);
-    const adminUser = await provider.getUserContext(adminIdentity, 'admin');
-    return adminUser;
-}
-
-const channelName = 'access-control-channel';
-const chaincodeName = 'access-control-chaincode';
-
-const mspOrg1 = 'Org1MSP';
-const org1UserId = 'javascriptAppUssssserc';
-
-const adminUserId = 'admin';
-const adminUserPasswd = 'adminpw';
-
-let caClient;
-let wallet;
-let gateway;
-let network;
-let accessControlChannel;
-let accessControlContract;
-
-let offlineSigningEndorsement;
-let offlineSigningCommit;
-
-async function init() {
-    const ccpPath = path.join(__dirname, '..', '..', 'app_chain', 'fablo-target', 'fabric-config', 'connection-profiles', 'connection-profile-org1.json');
-    ccp = buildCcp(ccpPath);
-    caClient = buildCaClient(FabricCaServices, ccp, 'ca.org1.example.com');
-    const walletPath = path.join(__dirname, 'wallet');
-    wallet = await buildWallet(Wallets, walletPath);
-    await enrollAdmin(caClient, wallet, mspOrg1);
-    await registerAndEnrollUser(caClient, wallet, mspOrg1, org1UserId);
     try {
+        // build connection
         gateway = new Gateway();
         await gateway.connect(ccp, {
             wallet,
@@ -167,9 +124,9 @@ async function init() {
                 asLocalhost: true  // using asLocalhost as this gateway is using a fabric network deployed locally
             }
         });
-        // Build a network instance based on the channel where the smart contract is deployed
+
+        // build channel and contract instance
         accessControlChannel = await gateway.getNetwork(channelName);
-        // Get the contract from the network.
         accessControlContract = accessControlChannel.getContract(chaincodeName);
     }
     catch (error) {
@@ -177,16 +134,18 @@ async function init() {
     }
 }
 
+//=== database initialization ===//
+
 let db;
 
 async function initDatabase() {
-    // connect  to database
+    // connect to database
     db = new sqlite3.Database(path.join(__dirname, 'database.sqlite'), sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, function (error) {
         if (error) {
             console.log(error);
         }
         else {
-            console.log('succcessfully connected to database');
+            console.log('[APP] Successfully connected to database.');
         }
     });
 
@@ -210,85 +169,12 @@ async function dbAll(queryStr, queryParams) {
     });
 }
 
-async function iiiiint() {
-    await init();
+async function init() {
+    await initAppChain();
     await initDatabase();
 }
-// init();
-// initDatabase();
-iiiiint();
 
-async function createTransaction(_userName, _wallet, _fabricCommon) {
-    // const a = await accessControlContract.evaluateTransaction('updatePermission', address, );
-
-
-
-
-    let userJson = await _wallet.get(_userName);
-    // console.log(userJson);
-    let user = _fabricCommon.User.createUser(
-        _userName,
-        null,
-        userJson.mspId,
-        userJson.credentials.certificate,
-        null
-    );
-    // let cryptoSuite = _fabricCommon.Utils.newCryptoSuite();
-    // let publicKey = await cryptoSuite.createKeyFromRaw(userJson.credentials.certificate);
-    // let identity = new _fabricCommon.Identity(userJson.credentials.certificate, publicKey, userJson.mspId, cryptoSuite);
-    // let user = new _fabricCommon.User(_userName);
-    // user._cryptoSuite = cryptoSuite;
-    // user._identity = identity;
-
-    console.log(user);
-    let userContext = gateway.client.newIdentityContext(user);
-    // userContext.client.mspid = mspOrg1;
-    console.log(userContext);
-
-    let endorsement = accessControlChannel.channel.newEndorsement('access-control-chaincode');
-    let proposalBytes = endorsement.build(userContext, {
-        fcn: 'updatePermission',
-        args: ['0x3e014e5c311a7d6f652ca4f8bb016f4338a44118', '{chr3: 2}']
-    });
-    console.log(proposalBytes);
-
-    const hash = crypto.createHash('sha256')
-        .update(proposalBytes)
-        .digest('hex');
-
-    const ecdsa = new elliptic.ec(elliptic.curves['p256']);
-    const temp = fs.readFileSync(path.join(__dirname, 'key.pem'), 'utf8');
-    console.log(temp);
-    const { prvKeyHex } = KEYUTIL.getKey(temp);
-    console.log(prvKeyHex);
-    const signKey = ecdsa.keyFromPrivate(prvKeyHex, 'hex');
-    const signature = ecdsa.sign(Buffer.from(hash, 'hex'), signKey, { canonical: true });
-    const signatureDER = Buffer.from(signature.toDER());
-    console.log(signatureDER.toString());
-
-    endorsement.sign(signatureDER);
-
-    console.log(accessControlChannel.channel.getEndorsers());
-
-
-    const proposalRespone = await endorsement.send({ targets: accessControlChannel.channel.getEndorsers() });
-    console.log('proposalResponse', proposalRespone);
-
-    let commit = endorsement.newCommit();
-    let commitBytes = commit.build(userContext);
-    let commitHash = crypto.createHash('sha256')
-        .update(commitBytes)
-        .digest('hex');
-    const commitSignature = ecdsa.sign(Buffer.from(commitHash, 'hex'), signKey, { canonical: true });
-    const commitSignatureDER = Buffer.from(commitSignature.toDER());
-    const temp123 = commit.sign(commitSignatureDER);
-    console.log(temp123);
-    const commitResponse = await commit.send({
-        requestTimeout: 300000,
-        targets: accessControlChannel.channel.getCommitters()
-    });
-    console.log(commitResponse);
-}
+init();
 
 async function decodeCsr(csr) {
     return new Promise(function (resolve, reject) {
@@ -298,10 +184,8 @@ async function decodeCsr(csr) {
     });
 }
 
-/* GET home page. */
 router.get('/index', function (req, res, next) {
-    res.render('app_index', { title: 'Express' });
-    // res.sendFile(path.join(__dirname, '..', 'views', 'index.html'));
+    res.render('app_index');
 });
 
 router.get('/', function (req, res, next) {
@@ -310,11 +194,6 @@ router.get('/', function (req, res, next) {
 
 router.get('/register', function (req, res, next) {
     res.render('app_register');
-});
-
-router.post('/test', async function (req, res) {
-    createTransaction('0x3e014e5c311a7d6f652ca4f8bb016f4338a44118', wallet, FabricCommon);
-    res.redirect('/app/index');
 });
 
 router.post('/register', async function (req, res) {
@@ -419,110 +298,17 @@ router.get('/manage', function (req, res, next) {
     res.render('app_manage');
 });
 
-router.post('/manage', async function (req, res) {
-    // createTransaction('0x3e014e5c311a7d6f652ca4f8bb016f4338a44118', wallet, FabricCommon);
-    res.redirect('/app/index');
-});
-
 router.post('/manage/get_permission', async function (req, res) {
     // get user's address
     const address = req.body.address;
-    console.log(address);
+    console.log('[APP] address =', address);
 
     // get permission from app chain
     const permission = await accessControlContract.evaluateTransaction('getPermission', address);
     const permissionJson = JSON.parse(permission.toString());
-    console.log(permissionJson);
+    console.log('[APP] permissionJson =', permissionJson);
+
     res.send({ data: permissionJson.data });
-});
-
-router.post('/manage/update_permission', async function (req, res) {
-    const address = req.body.address;
-    const permission = req.body.permission;
-    console.log(address, permission);
-
-    const userJson = await wallet.get(address);
-    const user = FabricCommon.User.createUser(address, null, userJson.mspId, userJson.credentials.certificate, null);
-    const userContext = gateway.client.newIdentityContext(user);
-
-    const endorsement = accessControlChannel.channel.newEndorsement('access-control-chaincode');
-    const proposalBytes = endorsement.build(userContext, {
-        fcn: 'updatePermission',
-        args: [address, permission]
-    });
-    const hashedProposalBytes = crypto.createHash('sha256')
-        .update(proposalBytes)
-        .digest('hex');
-
-    const keyFile = fs.readFileSync(path.join(__dirname, 'key.pem'), 'utf8');
-    const key = KEYUTIL.getKey(keyFile).prvKeyHex;
-    const ecdsa = new elliptic.ec(elliptic.curves['p256']);
-    const signKey = ecdsa.keyFromPrivate(key, 'hex');
-    const signature = ecdsa.sign(Buffer.from(hashedProposalBytes, 'hex'), signKey, { canonical: true });
-    endorsement.sign(Buffer.from(signature.toDER()));
-
-    const proposalResponse = await endorsement.send({ targets: accessControlChannel.channel.getEndorsers() });
-    console.log('proposalResponse =', proposalResponse);
-
-    const commit = endorsement.newCommit();
-    const commitBytes = commit.build(userContext);
-    const hashedCommitBytes = crypto.createHash('sha256')
-        .update(commitBytes)
-        .digest('hex');
-    const commitSignature = ecdsa.sign(Buffer.from(hashedCommitBytes, 'hex'), signKey, { canonical: true });
-    commit.sign(Buffer.from(commitSignature.toDER()));
-    const commitResponse = await commit.send({
-        requestTimeout: 300000,
-        targets: accessControlChannel.channel.getCommitters()
-    });
-    console.log(commitResponse);
-
-    // const userJson = await wallet.get(address);
-    // console.log('userJson =', userJson);
-
-    // const user = FabricCommon.User.createUser(address, null, userJson.mspId, userJson.credentials.certificate, null);
-    // console.log('user =', user);
-
-    // const userContext = gateway.client.newIdentityContext(user);
-
-    // const endorsement = accessControlChannel.channel.newEndorsement('access-control-chaincode');
-    // const proposalBytes = endorsement.build(userContext, {
-    //     fcn: '_get',
-    //     args: [address]
-    // });
-    // const hashedProposalBytes = crypto.createHash('sha256')
-    //     .update(proposalBytes)
-    //     .digest('hex');
-
-    // const keyFile = fs.readFileSync(path.join(__dirname, 'key.pem'), 'utf8');
-    // const key = KEYUTIL.getKey(keyFile).prvKeyHex;
-
-    // const ecdsa = new elliptic.ec(elliptic.curves['p256']);
-    // const signKey = ecdsa.keyFromPrivate(key, 'hex');
-    // const signature = ecdsa.sign(Buffer.from(hashedProposalBytes, 'hex'), signKey, { canonical: true });
-    // const signatureDer = Buffer.from(signature.toDER());
-
-    // endorsement.sign(signatureDer);
-    // const endorsers = accessControlChannel.channel.getEndorsers();
-    // const proposalResponse = await endorsement.send({ targets: endorsers });
-    // console.log('proposalResponse', proposalResponse);
-
-    // const commit = endorsement.newCommit();
-    // const commitBytes = commit.build(userContext);
-    // const commitHash = crypto.createHash('sha256')
-    //     .update(commitBytes)
-    //     .digest('hex');
-    // const commitSignature = ecdsa.sign(Buffer.from(commitHash, 'hex'), { canonical: true });
-    // const commitSignatureDer = Buffer.from(commitSignature.toDER());
-    // commit.sign(commitSignatureDer)
-    // const commiters = accessControlChannel.channel.getCommitters();
-    // const commitResponse = await commit.send({
-    //     requestTimeout: 300000,
-    //     targets: commiters
-    // });
-    // console.log(commitResponse);
-
-    res.redirect('/app/index');
 });
 
 router.post('/manage/update_permission/get_endorsement', async function (req, res) {
@@ -699,6 +485,7 @@ router.post('/download', async function (req, res) {
     // query permission from app chain
     const queryResultBuffer = await accessControlContract.evaluateTransaction('query', JSON.stringify(query));
     const queryResult = JSON.parse(queryResultBuffer.toString());
+    console.log('[APP] queryResult =', queryResult);
 
     // query data from database
     const identityManagerContract = new web3.eth.Contract(IDENTITY_MANAGER_ABI, DID_CONFIG.CONTRACTS.IDENTITY_MANAGER.ADDRESS);

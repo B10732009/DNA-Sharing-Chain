@@ -51,7 +51,7 @@ async function getCsr() {
             const hashedMsg = web3.utils.sha3(`\x19Ethereum Signed Message:\n${msg.length}${msg}`);
 
             // get encrypted csr from identity contract
-            const encryptedCsr = await identityContract.methods.getData('DNASSSYSTEM_CSR', hashedMsg, v, r, s)
+            const encryptedCsr = await identityContract.methods.getData('CSR', hashedMsg, v, r, s)
                 .call({ from: account })
                 .catch(function (error) { console.log(error); });
 

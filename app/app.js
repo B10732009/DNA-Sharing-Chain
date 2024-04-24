@@ -5,9 +5,6 @@ let cookieParser = require('cookie-parser');
 let logger = require('morgan');
 
 let indexRouter = require('./routes/index');
-let applyIdentityRouter = require('./routes/apply_identity');
-let manageIdentityRouter = require('./routes/manage_identity');
-let registerRouter = require('./routes/register');
 let didRouter = require('./routes/did');
 let appRouter = require('./routes/app');
 
@@ -24,9 +21,6 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', indexRouter);
-app.use('/apply_identity', applyIdentityRouter);
-app.use('/manage_identity', manageIdentityRouter);
-app.use('/register', registerRouter);
 app.use('/app', appRouter);
 app.use('/did', didRouter);
 

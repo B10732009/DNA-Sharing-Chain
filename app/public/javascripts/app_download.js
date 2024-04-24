@@ -6,8 +6,6 @@ async function getSignature() {
             document.getElementById('address').value = account;
 
             const msg = document.getElementById('message').value;
-            console.log('msg =', msg);
-            console.log(account);
 
             const web3 = new Web3(window.ethereum);
             const signature = await web3.eth.personal.sign(msg, account);
@@ -44,6 +42,13 @@ async function query() {
     const queryResult = downloadResJson.data;
 
     const tbody = document.getElementById('tbody');
+    
+    // remove old table items
+    while (tbody.rows.length > 0) {
+        tbody.deleteRow(0);
+    }
+
+    // add new table items
     for (const item of queryResult) {
         // add a new row containing two cells
         const row = tbody.insertRow();
@@ -62,9 +67,7 @@ async function query() {
         cell1.appendChild(button);
     }
 
-
-    console.log('downloadResJson =', downloadResJson);
-
+    alert('[APP] Available data has been refreshed.');
 }
 
 async function download(fileName, fileContent) {

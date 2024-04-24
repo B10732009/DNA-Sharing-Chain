@@ -81,7 +81,7 @@ async function updatePermission() {
             const hashedMsg = web3.utils.sha3(`\x19Ethereum Signed Message:\n${msg.length}${msg}`);
 
             // get encrypted key from identity contract
-            const encryptedKey = await identityContract.methods.getData('DNASSSYSTEM_KEY', hashedMsg, v, r, s)
+            const encryptedKey = await identityContract.methods.getData('KEY', hashedMsg, v, r, s)
                 .call({ from: account })
                 .catch(function (error) { console.log(error); });
 
