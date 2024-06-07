@@ -40,9 +40,10 @@ async function query() {
     });
     const downloadResJson = await downloadRes.json();
     const queryResult = downloadResJson.data;
+    console.log(queryResult);
 
     const tbody = document.getElementById('tbody');
-    
+
     // remove old table items
     while (tbody.rows.length > 0) {
         tbody.deleteRow(0);
@@ -50,24 +51,52 @@ async function query() {
 
     // add new table items
     for (const item of queryResult) {
-        // add a new row containing two cells
-        const row = tbody.insertRow();
-        const cell0 = row.insertCell(0);
-        const cell1 = row.insertCell(1);
+        const id = item.key;
+        const tickets = item.value;
+        for (const ticketName in tickets) {
+            const row = tbody.insertRow();
+            const cell0 = row.insertCell(0);
+            const cell1 = row.insertCell(1);
+            const cell2 = row.insertCell(2);
+            
+            cell0.innerText = `${id.slice(0, 6)}...${id.slice(-6)}`;
+            cell1.innerText = tickets[ticketName].url;
 
-        // set id
-        cell0.innerText = item.key;
+            const button = document.createElement('button');
+            button.innerText = 'download';
+            button.setAttribute('class', 'form-button form-table-button-selected-color');
+            button.setAttribute('type', 'button');
+            button.setAttribute('onclick', `download('${id}.ticket', '${tickets[ticketName].content}'); return false;`);
+            cell2.appendChild(button);
+        }
 
-        // set download button
-        const button = document.createElement('button');
-        button.innerText = 'download';
-        button.setAttribute('class', 'form-button form-table-button-selected-color');
-        button.setAttribute('type', 'button');
-        button.setAttribute('onclick', `download('${item.key}.vcf', '${item.value}'); return false;`);
-        cell1.appendChild(button);
+
+
+
     }
 
     alert('[APP] Available data has been refreshed.');
+}
+
+async function request() {
+    const requestUrl = document.getElementById('request_url').value;
+    const requestTicket = document.getElementById('request_ticket').files[0];
+    const requestTicketContent = await readFile(requestTicket);
+
+    console.log('requestUrl =', requestUrl);
+    console.log('requestTicketContent =', requestTicketContent);
+
+    const requestRes = await fetch(requestUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            requestTicket: requestTicketContent
+        })
+    });
+    const requestResJson = await requestRes.json();
+    console.log('requestResJson =', requestResJson);
+
+    await download(requestResJson.id, requestResJson.data);
 }
 
 async function download(fileName, fileContent) {
@@ -78,4 +107,14 @@ async function download(fileName, fileContent) {
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
+}
+
+function readFile(file) {
+    return new Promise(function (resolve, reject) {
+        const fileReader = new FileReader();
+        fileReader.readAsText(file, 'utf8');
+        fileReader.onload = async function (event) {
+            resolve(event.target.result);
+        }
+    });
 }

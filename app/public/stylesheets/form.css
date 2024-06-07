@@ -69,7 +69,15 @@
 }
 
 .form-table-item {
+    width: 15%;
+}
+
+.form-table-col20 {
     width: 20%;
+}
+
+.form-table-col80 {
+    width: 80%;
 }
 
 .form-table-button-color {

@@ -2,3 +2,4 @@ wallet/
 *.csr
 *.pem
 *.sqlite
+ticket1.txt

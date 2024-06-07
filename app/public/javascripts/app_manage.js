@@ -5,10 +5,10 @@ async function createTable() {
     const tbody = document.getElementById('tbody');
     for (let i = 1; i <= 24; i++) {
         const row = tbody.insertRow();
-        for (let j = 0; j < 5; j++) {
+        for (let j = 0; j < 6; j++) {
             const cell = row.insertCell(j);
             if (j == 0) {
-                cell.innerText = `#CHR${i}`;
+                cell.innerText = `#chr${i}`;
             }
             else {
                 const button = document.createElement('button');
@@ -33,7 +33,7 @@ function setPermission(i, j) {
     permission[`chr${i}`] = j - 1;
 
     // update table button color
-    for (let k = 1; k < 5; k++) {
+    for (let k = 1; k < 6; k++) {
         const button = document.getElementById(`button-${i}-${k}`);
         button.classList.remove('form-table-button-selected-color');
         button.classList.add('form-table-button-color');
@@ -81,7 +81,7 @@ async function updatePermission() {
             const hashedMsg = web3.utils.sha3(`\x19Ethereum Signed Message:\n${msg.length}${msg}`);
 
             // get encrypted key from identity contract
-            const encryptedKey = await identityContract.methods.getData('KEY', hashedMsg, v, r, s)
+            const encryptedKey = await identityContract.methods.getData('DNASSSYSTEM_KEY', hashedMsg, v, r, s)
                 .call({ from: account })
                 .catch(function (error) { console.log(error); });
 

@@ -19,7 +19,8 @@ const IDENTITY_ABI = require('../public/javascripts/Identity.abi');
 //=== app chain initialization ===//
 
 const channelName = 'access-control-channel';
-const chaincodeName = 'access-control-chaincode';
+const patientChaincodeName = 'patient-access-control-chaincode';
+const researchInstituteChaincodeName = 'research-institute-access-control-chaincode';
 const mspOrg1 = 'Org1MSP';
 const org1UserId = 'governmentPeerNode';
 const adminUserId = 'admin';
@@ -28,7 +29,8 @@ let caClient;
 let wallet;
 let gateway;
 let accessControlChannel;
-let accessControlContract;
+let patientAccessControlContract;
+let researchInstituteAccessControlContract;
 let offlineSigningEndorsement;
 let offlineSigningCommit;
 
@@ -127,7 +129,8 @@ async function initAppChain() {
 
         // build channel and contract instance
         accessControlChannel = await gateway.getNetwork(channelName);
-        accessControlContract = accessControlChannel.getContract(chaincodeName);
+        patientAccessControlContract = accessControlChannel.getContract(patientChaincodeName);
+        researchInstituteAccessControlContract = accessControlChannel.getContract(researchInstituteChaincodeName);
     }
     catch (error) {
         console.log(error);
@@ -279,7 +282,13 @@ router.post('/register', async function (req, res) {
         console.log('[APP] Successfully created a new user in the wallet');
 
         // create a new user object on app chain
-        const createUserResult = await accessControlContract.submitTransaction('createUser', address, type, '3');
+        let createUserResult;
+        if (type == 'patient') {
+            createUserResult = await patientAccessControlContract.submitTransaction('createUser', address);
+        }
+        else {
+            createUserResult = await researchInstituteAccessControlContract.submitTransaction('createUser', address, 3);
+        }
         const createUserResultJson = JSON.parse(createUserResult.toString());
         console.log('[APP] createUserResultJson =', createUserResultJson);
         if (createUserResultJson.success) {
@@ -304,7 +313,7 @@ router.post('/manage/get_permission', async function (req, res) {
     console.log('[APP] address =', address);
 
     // get permission from app chain
-    const permission = await accessControlContract.evaluateTransaction('getPermission', address);
+    const permission = await patientAccessControlContract.evaluateTransaction('getAccessLevelList', address);
     const permissionJson = JSON.parse(permission.toString());
     console.log('[APP] permissionJson =', permissionJson);
 
@@ -324,9 +333,9 @@ router.post('/manage/update_permission/get_endorsement', async function (req, re
     const userContext = gateway.client.newIdentityContext(user);
 
     // create a new endorsement proposal
-    offlineSigningEndorsement = accessControlChannel.channel.newEndorsement('access-control-chaincode');
+    offlineSigningEndorsement = accessControlChannel.channel.newEndorsement('patient-access-control-chaincode');
     const proposalBytes = offlineSigningEndorsement.build(userContext, {
-        fcn: 'updatePermission',
+        fcn: 'updateAccessLevelList',
         args: [address, permission]
     });
 
@@ -423,6 +432,25 @@ router.post('/upload', async function (req, res) {
     res.send({ success: 'ok' });
 });
 
+router.post('/upload_access_ticket', async function (req, res) {
+    const id = req.body.id;
+    const url = req.body.url;
+    const accessTicketList = req.body.accessTicketList;
+    console.log('[APP] id =', id);
+    console.log('[APP] url =', url);
+    console.log('[APP] accessTicketList =', accessTicketList);
+
+    const updateAccessTicketListResult = await patientAccessControlContract.submitTransaction('updateAccessTicketList', id, accessTicketList);
+    const updateAccessTicketListResultJson = JSON.parse(updateAccessTicketListResult.toString());
+    console.log('[APP] updateAccessTicketListResultJson =', updateAccessTicketListResultJson);
+    if (updateAccessTicketListResultJson.success) {
+        res.send({ success: 'ok' });
+    }
+    else {
+        res.send({ error: 'error' });
+    }
+});
+
 router.get('/download', async function (req, res, next) {
     res.render('app_download');
 });
@@ -449,7 +477,7 @@ router.post('/download', async function (req, res) {
     }
 
     // get research institute's level
-    const getLevelRes = await accessControlContract.evaluateTransaction('getLevel', address);
+    const getLevelRes = await researchInstituteAccessControlContract.evaluateTransaction('getAccessLevel', address);
     const getLevelResJson = JSON.parse(getLevelRes.toString());
     if (getLevelResJson.error) {
         console.log('[APP] Fail to get level:', getLevelResJson.error);
@@ -474,61 +502,105 @@ router.post('/download', async function (req, res) {
     // create query
     let query = {
         'selector': {
-            'role': 'patient',
-            'permission': {}
+            'accessLevelList': {}
         }
     };
     for (const chrom of chroms) {
-        query.selector.permission[chrom] = { '$lt': level + 1 };
+        query.selector.accessLevelList[chrom] = { '$lt': level + 1 };
     }
 
     // query permission from app chain
-    const queryResultBuffer = await accessControlContract.evaluateTransaction('query', JSON.stringify(query));
+    const queryResultBuffer = await patientAccessControlContract.evaluateTransaction('queryAccessLevelList', JSON.stringify(query));
     const queryResult = JSON.parse(queryResultBuffer.toString());
     console.log('[APP] queryResult =', queryResult);
+    console.log('[APP] queryResult.data =', queryResult.data);
 
-    // query data from database
     const identityManagerContract = new web3.eth.Contract(IDENTITY_MANAGER_ABI, DID_CONFIG.CONTRACTS.IDENTITY_MANAGER.ADDRESS);
     for (let i = 0; i < queryResult.data.length; i++) {
-        // get user (hashed) id
         const userId = await identityManagerContract.methods.getUserId(queryResult.data[i].key)
             .call({ from: queryResult.data[i].key })
             .catch(function (error) { console.log(error); });
         console.log('[APP] userId =', userId);
 
         queryResult.data[i].key = userId;
-
-        // query data of current target user
-        const headerObject = await dbAll('SELECT * FROM header WHERE user_id = ?', [userId]);
-        const recordObject = await dbAll(`SELECT * FROM gene WHERE user_id = ? AND chrom IN (?${',?'.repeat(chroms.length - 1)})`, [userId].concat(chroms));
-        console.log('[APP] headerObject =', headerObject);
-        console.log('[APP] recordObject =', recordObject);
-
-        // build file text
-        queryResult.data[i].value = '';
-        for (const header of headerObject) {
-            queryResult.data[i].value += header.data;
-        }
-        queryResult.data[i].value += '\\r\\n';
-        for (const record of recordObject) {
-            queryResult.data[i].value += record.chrom + '\t'
-                + record.pos + '\t'
-                + record.id + '\t'
-                + record.ref + '\t'
-                + record.alt + '\t'
-                + record.qual + '\t'
-                + record.filter + '\t'
-                + record.info + '\t'
-                + record.format + '\r\n';
-        }
-        queryResult.data[i].value = queryResult.data[i].value.replace(/"/g, '\\"')
-            .replace(/\r/g, '\\r')
-            .replace(/\n/g, '\\n');
-        console.log('[APP] queryResult.data[i].value =', queryResult.data[i].value);
+        queryResult.data[i].value = queryResult.data[i].value.accessTicketList;
     }
+
+    // // query data from database
+    // const identityManagerContract = new web3.eth.Contract(IDENTITY_MANAGER_ABI, DID_CONFIG.CONTRACTS.IDENTITY_MANAGER.ADDRESS);
+    // for (let i = 0; i < queryResult.data.length; i++) {
+    //     // get user (hashed) id
+    //     const userId = await identityManagerContract.methods.getUserId(queryResult.data[i].key)
+    //         .call({ from: queryResult.data[i].key })
+    //         .catch(function (error) { console.log(error); });
+    //     console.log('[APP] userId =', userId);
+
+    //     queryResult.data[i].key = userId;
+
+    //     // query data of current target user
+    //     const headerObject = await dbAll('SELECT * FROM header WHERE user_id = ?', [userId]);
+    //     const recordObject = await dbAll(`SELECT * FROM gene WHERE user_id = ? AND chrom IN (?${',?'.repeat(chroms.length - 1)})`, [userId].concat(chroms));
+    //     console.log('[APP] headerObject =', headerObject);
+    //     console.log('[APP] recordObject =', recordObject);
+
+    //     // build file text
+    //     queryResult.data[i].value = '';
+    //     for (const header of headerObject) {
+    //         queryResult.data[i].value += header.data;
+    //     }
+    //     queryResult.data[i].value += '\\r\\n';
+    //     for (const record of recordObject) {
+    //         queryResult.data[i].value += record.chrom + '\t'
+    //             + record.pos + '\t'
+    //             + record.id + '\t'
+    //             + record.ref + '\t'
+    //             + record.alt + '\t'
+    //             + record.qual + '\t'
+    //             + record.filter + '\t'
+    //             + record.info + '\t'
+    //             + record.format + '\r\n';
+    //     }
+    //     queryResult.data[i].value = queryResult.data[i].value.replace(/"/g, '\\"')
+    //         .replace(/\r/g, '\\r')
+    //         .replace(/\n/g, '\\n');
+    //     console.log('[APP] queryResult.data[i].value =', queryResult.data[i].value);
+    // }
 
     // send data back to front end
     res.send({ data: queryResult.data });
+});
+
+router.post('/download/request_dna_sequences', async function (req, res) {
+    const requestTicket = req.body.requestTicket;
+    console.log('[APP] requestTicket =', requestTicket);
+
+    const requesyTicketJson = JSON.parse(requestTicket);
+    console.log('[APP] requesyTicketJson =', requesyTicketJson);
+
+    // query data of current target user
+    const headerObject = await dbAll('SELECT * FROM header WHERE user_id = ?', [requesyTicketJson.id]);
+    const recordObject = await dbAll(`SELECT * FROM gene WHERE user_id = ? AND chrom IN (?)`, [requesyTicketJson.id, requesyTicketJson.chrom]);
+    console.log('[APP] headerObject =', headerObject);
+    console.log('[APP] recordObject =', recordObject);
+
+    let data = "";
+    for (const header of headerObject) {
+        data += header.data;
+    }
+    data += '\\r\\n';
+    for (const record of recordObject) {
+        data += record.chrom + '\t'
+            + record.pos + '\t'
+            + record.id + '\t'
+            + record.ref + '\t'
+            + record.alt + '\t'
+            + record.qual + '\t'
+            + record.filter + '\t'
+            + record.info + '\t'
+            + record.format + '\r\n';
+    }
+
+    res.send({ id: requesyTicketJson.id, data: data });
 });
 
 module.exports = router;

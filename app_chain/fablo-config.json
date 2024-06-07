@@ -74,11 +74,19 @@
   ],
   "chaincodes": [
     {
-      "name": "access-control-chaincode",
+      "name": "patient-access-control-chaincode",
       "version": "0.0.1",
       "lang": "node",
       "channel": "access-control-channel",
-      "directory": "./chaincodes/access_control",
+      "directory": "./chaincodes/patient_access_control",
+      "endorsement": "OR('Org1MSP.member', 'Org2MSP.member')"
+    },
+    {
+      "name": "research-institute-access-control-chaincode",
+      "version": "0.0.1",
+      "lang": "node",
+      "channel": "access-control-channel",
+      "directory": "./chaincodes/research_institute_access_control",
       "endorsement": "OR('Org1MSP.member', 'Org2MSP.member')"
     }
   ]

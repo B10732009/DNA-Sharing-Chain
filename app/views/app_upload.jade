@@ -6,10 +6,10 @@ html(lang='en')
         link(rel='stylesheet' type='text/css' href='../stylesheets/body.css')
         link(rel='stylesheet' type='text/css' href='../stylesheets/navbar.css')
         link(rel='stylesheet' type='text/css' href='../stylesheets/form.css')
-        title PPDNASSP
+        title DNA-SHARING-CHAIN
     body
         div.navbar
-            a.navbar-item.navbar-item-left(href='/app/index') PPDNASSP
+            a.navbar-item.navbar-item-left(href='/app/index') DNA-SHARING-CHAIN
             a.navbar-item.navbar-item-right(href='/app/download') Download
             a.navbar-item.navbar-item-right(href='/app/upload') Upload
             a.navbar-item.navbar-item-right(href='/app/manage') Manage
@@ -17,8 +17,16 @@ html(lang='en')
         form.form
             h3.form-title Upload DNA Sequences
             input.form-input#id(type='text' name='id' placeholder='id' required='')
+            input.form-input#tags(type='text', name='tags' placeholder='tags')
+            
             input.form-input#file(type='file' name='file' placeholder='file' required='')
             button.form-button.form-button-color(type='button' onclick='upload();') upload
+        form.form
+            h3.form-title Upload Access Tickets
+            input.form-input#id2(type='text' name='id' placeholder='id' required='')
+            input.form-input#url(type='text' name='url' placeholder='url' required='')
+            input.form-input#tickets(type='file' name='tickets' placeholder='access_tickets' multiple='multiple' required='')
+            button.form-button.form-button-color(type='button' onclick='uploadAccessTickets();') upload
         br
         br
         br

@@ -49,5 +49,71 @@ async function upload() {
     };
 }
 
+function readFile(file) {
+    return new Promise(function (resolve, reject) {
+        const fileReader = new FileReader();
+        fileReader.readAsText(file, 'utf8');
+        fileReader.onload = async function (event) {
+            resolve(event.target.result);
+        }
+    });
+}
+
+async function uploadAccessTickets() {
+    const id = document.getElementById('id2').value;
+    const url = document.getElementById('url').value;
+    const files = document.getElementById('tickets').files;
+    console.log('url =', url);
+    console.log('tickets =', tickets);
+
+    let accessTicketList = {
+        // chr1: 'MHcCAQEEID+jOFFCJ2kFF3OhhGbRoGCXgnzEJZfaDLf6NMSTGGVJoAoGCCqGSM49',
+        // chr2: 'MHcCAQEEID+jOFFCJ2kFF3OhhGbRoGCXgnzEJZfaDLf6NMSTGGVJoAoGCCqGSM49'
+    };
+    for (let i = 0; i < files.length; i++) {
+        const name = files[i].name;
+        const content = await readFile(files[i]);
+        accessTicketList[name] = {
+            url: url,
+            content: content
+        };
+    }
+
+
+    // for (let i = 0; i < files.length; i++) {
+    //     const fileReader = new FileReader();
+    //     fileReader.onload = async function (event) {
+    //         const name = event.target.fileName;
+    //         const data = event.target.result.replace(/\r/g, "\n"); // content of the file
+    //         console.log(data);
+    //         accessTicketList[name] = data;
+    //     }
+    //     fileReader.readAsText(files[i], 'utf8');
+    // }
+
+    // 0x3e014e5c311a7d6f652ca4f8bb016f4338a44118
+
+    console.log('accessTicketList =', accessTicketList);
+
+    const uploadAccessTicketRes = await fetch('/app/upload_access_ticket', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            id: id,
+            url: url,
+            accessTicketList: JSON.stringify(accessTicketList)
+        })
+    });
+    const uploadAccessTicketResJson = await uploadAccessTicketRes.json();
+    console.log('uploadAccessTicketResJson =', uploadAccessTicketResJson);
+
+    if (uploadAccessTicketResJson.success) {
+        alert('[APP] Successfully uploaded access tickets.');
+    }
+    else {
+        alert(`[APP] Fail to upload access tickets: ${uploadResJson.error}`);
+    }
+}
+
 
 

@@ -6,24 +6,25 @@ html(lang='en')
         link(rel='stylesheet' type='text/css' href='../stylesheets/body.css')
         link(rel='stylesheet' type='text/css' href='../stylesheets/navbar.css')
         link(rel='stylesheet' type='text/css' href='../stylesheets/form.css')
-        title PPDNASSP
+        title DNA-SHARING-CHAIN
     body
         div.navbar
-            a.navbar-item.navbar-item-left(href='/app/index') PPDNASSP
+            a.navbar-item.navbar-item-left(href='/app/index') DNA-SHARING-CHAIN
             a.navbar-item.navbar-item-right(href='/app/download') Download
             a.navbar-item.navbar-item-right(href='/app/upload') Upload
             a.navbar-item.navbar-item-right(href='/app/manage') Manage
             a.navbar-item.navbar-item-right(href='/app/register') Register
         form.form
-            h3.form-title Edit Permission
+            h3.form-title Update Access Levels
             table.form-table
                 thead
                     tr
                         th.form-table-item #chrom
-                        th.form-table-item private
-                        th.form-table-item restrict i
-                        th.form-table-item restrict ii
                         th.form-table-item public
+                        th.form-table-item protected i
+                        th.form-table-item protected ii
+                        th.form-table-item protected iii
+                        th.form-table-item private
                     tr
                 tbody#tbody
             br

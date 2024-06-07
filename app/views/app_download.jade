@@ -6,33 +6,40 @@ html(lang='en')
         link(rel='stylesheet' type='text/css' href='../stylesheets/body.css')
         link(rel='stylesheet' type='text/css' href='../stylesheets/navbar.css')
         link(rel='stylesheet' type='text/css' href='../stylesheets/form.css')
-        title PPDNASSP
+        title DNA-SHARING-CHAIN
     body
         div.navbar
-            a.navbar-item.navbar-item-left(href='/app/index') PPDNASSP
+            a.navbar-item.navbar-item-left(href='/app/index') DNA-SHARING-CHAIN
             a.navbar-item.navbar-item-right(href='/app/download') Download
             a.navbar-item.navbar-item-right(href='/app/upload') Upload
             a.navbar-item.navbar-item-right(href='/app/manage') Manage
             a.navbar-item.navbar-item-right(href='/app/register') Register
         form.form
-            h3.form-title Query DNA Sequences
+            h3.form-title Query Access Tickets
             input.form-input#address(type='text' name='address' placeholder='address' hidden readonly='')
-            input.form-input#message(type='text' name='message' placeholder='message' value='APP_DOWNLOAD_DATA' readonly='')
+            input.form-input#message(type='text' name='message' placeholder='message' value='APP_DOWNLOAD_DATA' hidden readonly='')
             input.form-input#signature(type='text' name='signature' placeholder='signature' required readonly='')
             button.form-button.form-metamask-button-color(type='button' onclick='getSignature();') sign 
             br
             br
             input.form-input#chrom-ranges(type='text' name='chrom_ranges' placeholder='chrom_ranges')
+            input.form-input#tags(type='text' name='tags' placeholder='tags (optional)')
             button.form-button.form-button-color(type='button' onclick='query();') query
         form.form
-            h3.form-title Download DNA Sequences
-            table.form-table
+            h3.form-title Download Access Tickets
+            table
                 thead
                     tr
                         th.form-table-item #id
-                        th.form-table-item file
+                        th.form-table-item url
+                        th.form-table-item tickets
                     tr
                 tbody#tbody
+        form.form
+            h3.form-title Request DNA Sequences
+            input.form-input#request_url(type='text' name='url' placeholder='url' required)
+            input.form-input#request_ticket(type='file' name='ticket' placeholder='access_ticket' required)
+            button.form-button.form-button-color(type='button' onclick='request();') request
         br
         br
         br
