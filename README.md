@@ -1,6 +1,6 @@
 # DNA-SHARING-CHAIN
 
-Sample Dapp for *"DNA-Sharing-Chain: A Privacy Preserving DNA Sequence Sharing Ecosystem"*.
+Sample Dapp for the thesis *"DNA-Sharing-Chain: A Privacy Preserving DNA Sequence Sharing Ecosystem"*.
 
 ## Environment
 
@@ -119,7 +119,7 @@ Sample Dapp for *"DNA-Sharing-Chain: A Privacy Preserving DNA Sequence Sharing E
         ```
         Delete the folder `/app/routes/wallet/` and restart the system again.
 
-### Data Generator (Optional)
+### Sample Data Generation (Optional)
 
 Generate sample data in VCF format. Written in C++.
 
@@ -128,6 +128,17 @@ cd data_generator/
 ```
 ```bash
 ./data_generator.cpp <output_file_path> <record_number>
+```
+
+### CSR and Private Key Generation (Optional)
+
+Generate CSR and private key by OpenSSL.
+
+```bash
+openssl ecparam -name prime256v1 -genkey -noout -out key.pem
+```
+```bash
+openssl req -new -sha256 -key key.pem -nodes -nodes -out key.csr
 ```
 
 ## References
