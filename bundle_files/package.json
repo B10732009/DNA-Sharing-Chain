@@ -1,17 +1,19 @@
 {
-  "name": "tttest",
+  "name": "bundle-files",
   "version": "1.0.0",
   "description": "",
   "main": "main.js",
   "scripts": {
+    "build": "browserify buffer.js -s Buffer -o ../app/public/javascripts/buffer.bundle.js && browserify elliptic.js -s Elliptic -o ../app/public/javascripts/elliptic.bundle.js && browserify eth_sig_util.js -s EthSigUtil -o ../app/public/javascripts/eth_sig_util.bundle.js && browserify jsrsasign.js -s Jsrsasign -o ../app/public/javascripts/jsrsasign.bundle.js && browserify web3.js -s Web3 -o ../app/public/javascripts/web3.bundle.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "eth-sig-util": "^3.0.1",
-    "web3": "^1.5.3",
+    "browserify": "^17.0.0",
     "elliptic": "^6.5.4",
-    "jsrsasign": "^10.5.27"
+    "eth-sig-util": "^3.0.1",
+    "jsrsasign": "^10.5.27",
+    "web3": "^1.5.3"
   }
 }

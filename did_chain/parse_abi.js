@@ -1,18 +1,11 @@
 const fs = require('fs');
 const path = require('path');
 
-for (const arg  of process.argv.slice(2)) {
-    console.log(arg);
-}
-
 const abiFileDir = path.join(__dirname, 'build', 'contracts');
 const newAbiFileDir = path.join(__dirname, '..', 'app', 'public', 'javascripts');
-const abiFileList = fs.readdirSync(abiFileDir);
+const abiFileList = ['IdentityManager.json', 'Identity.json'];
 
 for (const abiFile of abiFileList) {
-    if (abiFile.length > 6 && abiFile.slice(-6) == 'abi.js') {
-        continue;
-    }
     const abi = JSON.parse(fs.readFileSync(path.join(abiFileDir, abiFile))).abi;
     const newAbiName = abiFile.slice(0, -5);
     const newAbiFileName = `${newAbiName}.abi.js`;

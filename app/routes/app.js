@@ -20,15 +20,6 @@ const identityAbi = require('../public/javascripts/Identity.abi');
 const web3 = new Web3(didConfig.url);
 const identityManagerContract = new web3.eth.Contract(identityManagerAbi, didConfig.contracts.identityManager.address);
 
-//=== app chain initialization ===//
-
-// const channelName = 'access-control-channel';
-// const patientChaincodeName = 'patient-access-control-chaincode';
-// const researchInstituteChaincodeName = 'research-institute-access-control-chaincode';
-// const mspOrg1 = 'Org1MSP';
-// const org1UserId = 'Peer';
-// const adminUserId = 'admin';
-// const adminUserPasswd = 'adminpw';
 let caClient;
 let wallet;
 let gateway;
