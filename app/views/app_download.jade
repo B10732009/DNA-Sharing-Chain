@@ -24,7 +24,7 @@ html(lang='en')
             br
             input.form-input#chrom-ranges(type='text' name='chrom_ranges' placeholder='chrom_ranges')
             input.form-input#tags(type='text' name='tags' placeholder='tags (optional)')
-            button.form-button.form-button-color(type='button' onclick='query();') query
+            button.form-button.form-button-color(type='button' onclick='queryAccessTickets();') query
         form.form
             h3.form-title Download Access Tickets
             table
@@ -39,7 +39,7 @@ html(lang='en')
             h3.form-title Request DNA Sequences
             input.form-input#request_url(type='text' name='url' placeholder='url' required)
             input.form-input#request_ticket(type='file' name='ticket' placeholder='access_ticket' required)
-            button.form-button.form-button-color(type='button' onclick='request();') request
+            button.form-button.form-button-color(type='button' onclick='requestDnaSequences();') request
         br
         br
         br

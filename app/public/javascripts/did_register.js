@@ -1,21 +1,15 @@
 async function getAddress() {
-    if (typeof window.ethereum !== 'undefined') {
-        try {
-            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-            const account = accounts[0];
-            document.getElementById('address').value = account;
-        }
-        catch (error) {
-            console.log(error);
-        }
-    }
-    else {
+    if (typeof window.ethereum == 'undefined') {
         console.log('MetaMask is not installed');
+        return;
     }
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    const account = accounts[0];
+    document.getElementById('address').value = account;
 }
 
 async function register() {
-    // get element values
+    // get user's type, id, address
     const type = document.getElementById('type').value;
     const id = document.getElementById('id').value;
     const address = document.getElementById('address').value;
@@ -37,7 +31,7 @@ async function register() {
         return;
     }
 
-    // post to server to register a new identity
+    // request to register a new identity
     const registerRes = await fetch('/did/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -52,7 +46,6 @@ async function register() {
 
     if (registerResJson.success) {
         alert('[DID] Successfully created a new identity.');
-        window.location.href = '/did/index';
     }
     else {
         alert(`[DID] Fail to create a new identity: ${registerResJson.error}`);

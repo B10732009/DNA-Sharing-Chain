@@ -1,9 +1,9 @@
 let express = require('express');
 let router = express.Router();
-let path = require('path');
-let fs = require('fs');
-let crypto = require('crypto');
-let elliptic = require('elliptic');
+const path = require('path');
+const fs = require('fs');
+const crypto = require('crypto');
+const elliptic = require('elliptic');
 const EthSigUtil = require('eth-sig-util');
 const { KEYUTIL } = require('jsrsasign');
 const { Web3 } = require('web3');
@@ -12,19 +12,23 @@ const FabricCaServices = require('fabric-ca-client');
 const FabricCommon = require('fabric-common');
 const openssl = require('openssl-nodejs');
 const sqlite3 = require('sqlite3').verbose();
-const DID_CONFIG = require('../public/javascripts/did_config');
-const IDENTITY_MANAGER_ABI = require('../public/javascripts/IdentityManager.abi');
-const IDENTITY_ABI = require('../public/javascripts/Identity.abi');
+const didConfig = require('../public/javascripts/did_config');
+const appConfig = require(path.join(__dirname, '..', 'public', 'javascripts', 'app_config'));
+const identityManagerAbi = require('../public/javascripts/IdentityManager.abi');
+const identityAbi = require('../public/javascripts/Identity.abi');
+
+const web3 = new Web3(didConfig.url);
+const identityManagerContract = new web3.eth.Contract(identityManagerAbi, didConfig.contracts.identityManager.address);
 
 //=== app chain initialization ===//
 
-const channelName = 'access-control-channel';
-const patientChaincodeName = 'patient-access-control-chaincode';
-const researchInstituteChaincodeName = 'research-institute-access-control-chaincode';
-const mspOrg1 = 'Org1MSP';
-const org1UserId = 'governmentPeerNode';
-const adminUserId = 'admin';
-const adminUserPasswd = 'adminpw';
+// const channelName = 'access-control-channel';
+// const patientChaincodeName = 'patient-access-control-chaincode';
+// const researchInstituteChaincodeName = 'research-institute-access-control-chaincode';
+// const mspOrg1 = 'Org1MSP';
+// const org1UserId = 'Peer';
+// const adminUserId = 'admin';
+// const adminUserPasswd = 'adminpw';
 let caClient;
 let wallet;
 let gateway;
@@ -62,45 +66,45 @@ async function initAppChain() {
     }
 
     // enroll administrator
-    if (await wallet.get(adminUserId)) {
+    if (await wallet.get(appConfig.admin.id)) {
         console.log('[APP] An identity for the admin user already exists in the wallet.');
     }
     else {
         const enrollment = await caClient.enroll({
-            enrollmentID: adminUserId,
-            enrollmentSecret: adminUserPasswd
+            enrollmentID: appConfig.admin.id,
+            enrollmentSecret: appConfig.admin.password
         });
         const x509Identity = {
             credentials: {
                 certificate: enrollment.certificate,
                 privateKey: enrollment.key.toBytes(),
             },
-            mspId: mspOrg1,
+            mspId: appConfig.mspId,
             type: 'X.509',
         };
-        await wallet.put(adminUserId, x509Identity);
+        await wallet.put(appConfig.admin.id, x509Identity);
         console.log('[APP] Successfully enrolled admin user and imported it into the wallet.');
     }
 
     // register and enroll goverment peer node
-    if (await wallet.get(org1UserId)) {
-        console.log(`[APP] An identity for the user {${org1UserId}} already exists in the wallet.`);
+    if (await wallet.get(appConfig.orgUserId)) {
+        console.log(`[APP] An identity for the user {${appConfig.orgUserId}} already exists in the wallet.`);
     }
     else {
         // create a admin user object for registering
-        const adminIdentity = await wallet.get(adminUserId);
+        const adminIdentity = await wallet.get(appConfig.admin.id);
         const adminUser = await wallet.getProviderRegistry()
             .getProvider(adminIdentity.type)
-            .getUserContext(adminIdentity, adminUserId);
+            .getUserContext(adminIdentity, appConfig.admin.id);
 
         // register and enroll user
         const secret = await caClient.register({
             affiliation: null, // affiliation,
-            enrollmentID: org1UserId,
+            enrollmentID: appConfig.orgUserId,
             role: 'client'
         }, adminUser);
         const enrollment = await caClient.enroll({
-            enrollmentID: org1UserId,
+            enrollmentID: appConfig.orgUserId,
             enrollmentSecret: secret
         });
         const x509Identity = {
@@ -108,11 +112,11 @@ async function initAppChain() {
                 certificate: enrollment.certificate,
                 privateKey: enrollment.key.toBytes(),
             },
-            mspId: mspOrg1,
+            mspId: appConfig.mspId,
             type: 'X.509',
         };
-        await wallet.put(org1UserId, x509Identity);
-        console.log(`[APP] Successfully registered and enrolled user {${org1UserId}} and imported it into the wallet.`);
+        await wallet.put(appConfig.orgUserId, x509Identity);
+        console.log(`[APP] Successfully registered and enrolled user {${appConfig.orgUserId}} and imported it into the wallet.`);
     }
 
     try {
@@ -120,7 +124,7 @@ async function initAppChain() {
         gateway = new Gateway();
         await gateway.connect(ccp, {
             wallet,
-            identity: org1UserId,
+            identity: appConfig.orgUserId,
             discovery: {
                 enabled: true,
                 asLocalhost: true  // using asLocalhost as this gateway is using a fabric network deployed locally
@@ -128,9 +132,9 @@ async function initAppChain() {
         });
 
         // build channel and contract instance
-        accessControlChannel = await gateway.getNetwork(channelName);
-        patientAccessControlContract = accessControlChannel.getContract(patientChaincodeName);
-        researchInstituteAccessControlContract = accessControlChannel.getContract(researchInstituteChaincodeName);
+        accessControlChannel = await gateway.getNetwork(appConfig.channels.accessControl.name);
+        patientAccessControlContract = accessControlChannel.getContract(appConfig.chaincodes.patientAccessControl.name);
+        researchInstituteAccessControlContract = accessControlChannel.getContract(appConfig.chaincodes.researchInstituteAccessControl.name);
     }
     catch (error) {
         console.log(error);
@@ -213,7 +217,6 @@ router.post('/register', async function (req, res) {
 
     try {
         // verify signature
-        const web3 = new Web3(DID_CONFIG.URL);
         const recoveredAddress = web3.eth.accounts.recover(message, signature);
         console.log('[APP] recoveredAddress.toLowerCase() =', recoveredAddress.toLowerCase());
         if (recoveredAddress.toLowerCase() != address.toLowerCase()) {
@@ -224,18 +227,17 @@ router.post('/register', async function (req, res) {
         console.log('[APP] Successfully verified the signature.');
 
         // verify type
-        const identityManagerContract = new web3.eth.Contract(IDENTITY_MANAGER_ABI, DID_CONFIG.CONTRACTS.IDENTITY_MANAGER.ADDRESS);
         const didType = await identityManagerContract.methods.getUserType(address)
             .call({ from: address })
             .catch(function (error) { console.log(error); });
-        if ((`${didType}` == '1' && type != 'patient') || (`${didType}` == 2 && type != 'research_institute')) {
+        if ((`${didType}` == '1' && type != 'patient') || (`${didType}` == '2' && type != 'research_institute')) {
             console.log('[APP] Did type error.');
             res.send({ error: 'Did type error.' });
             return;
         }
 
         // decrypt csr
-        const csr = EthSigUtil.decrypt(JSON.parse(appEncryptedCsr), DID_CONFIG.ORG.PRVKEY);
+        const csr = EthSigUtil.decrypt(JSON.parse(appEncryptedCsr), didConfig.orgs.health.prvkey);
         console.log('[APP] csr =', csr);
 
         // decode csr and retrieve common name
@@ -245,7 +247,7 @@ router.post('/register', async function (req, res) {
         console.log('[APP] cn =', cn);
 
         // get admin user
-        const adminIdentity = await wallet.get(adminUserId);
+        const adminIdentity = await wallet.get(appConfig.admin.id);
         if (!adminIdentity) {
             console.log('[APP] Fail to find admin user in wallet.');
             res.send({ error: 'Fail to find admin user in wallet.' });
@@ -253,14 +255,14 @@ router.post('/register', async function (req, res) {
         }
         const adminUser = await wallet.getProviderRegistry()
             .getProvider(adminIdentity.type)
-            .getUserContext(adminIdentity, adminUserId);
+            .getUserContext(adminIdentity, appConfig.admin.id);
 
         // register a new user with provided csr
         const secret = await caClient.register({
             affiliation: null,
             attrs: [{
                 name: 'category',
-                value: 'governmentPeerNode',
+                value: 'Peer',
                 ecert: true
             }],
             enrollmentID: cn,
@@ -275,19 +277,24 @@ router.post('/register', async function (req, res) {
             credentials: {
                 certificate: enrollment.certificate,
             },
-            mspId: mspOrg1,
+            mspId: appConfig.mspId,
             type: 'X.509',
         };
-        await wallet.put(address, x509Identity);
+
+        const id = await identityManagerContract.methods.getUserId(address)
+            .call({ from: address })
+            .catch(function (error) { console.log(error); });
+        await wallet.put(id, x509Identity);
         console.log('[APP] Successfully created a new user in the wallet');
 
-        // create a new user object on app chain
+        // create a new access control object on app chain
         let createUserResult;
         if (type == 'patient') {
-            createUserResult = await patientAccessControlContract.submitTransaction('createUser', address);
+            createUserResult = await patientAccessControlContract.submitTransaction('createUser', id);
         }
         else {
-            createUserResult = await researchInstituteAccessControlContract.submitTransaction('createUser', address, 3);
+            const accessLevel = 3; // should be granted by government
+            createUserResult = await researchInstituteAccessControlContract.submitTransaction('createUser', id, accessLevel);
         }
         const createUserResultJson = JSON.parse(createUserResult.toString());
         console.log('[APP] createUserResultJson =', createUserResultJson);
@@ -307,36 +314,35 @@ router.get('/manage', function (req, res, next) {
     res.render('app_manage');
 });
 
-router.post('/manage/get_permission', async function (req, res) {
-    // get user's address
-    const address = req.body.address;
-    console.log('[APP] address =', address);
+router.post('/manage/get_access_level_list', async function (req, res) {
+    // get user id
+    const id = req.body.id;
+    console.log('[APP] id =', id);
 
-    // get permission from app chain
-    const permission = await patientAccessControlContract.evaluateTransaction('getAccessLevelList', address);
-    const permissionJson = JSON.parse(permission.toString());
-    console.log('[APP] permissionJson =', permissionJson);
-
-    res.send({ data: permissionJson.data });
+    // get access level list from app chain
+    const accessLevelList = await patientAccessControlContract.evaluateTransaction('getAccessLevelList', id);
+    const accessLevelListJson = JSON.parse(accessLevelList.toString());
+    console.log('[APP] accessLevelListJson =', accessLevelListJson);
+    res.send({ data: accessLevelListJson.data });
 });
 
-router.post('/manage/update_permission/get_endorsement', async function (req, res) {
+router.post('/manage/update_access_level_list/get_endorsement', async function (req, res) {
     // get user's address and permission
-    const address = req.body.address;
-    const permission = req.body.permission;
-    console.log('[APP] address =', address);
-    console.log('[APP] permission =', permission);
+    const id = req.body.id;
+    const accessLevelList = req.body.accessLevelList;
+    console.log('[APP] id =', id);
+    console.log('[APP] accessLevelList =', accessLevelList);
 
     // get user info from local wallet
-    const userJson = await wallet.get(address);
-    const user = FabricCommon.User.createUser(address, null, userJson.mspId, userJson.credentials.certificate, null);
+    const userJson = await wallet.get(id);
+    const user = FabricCommon.User.createUser(id, null, userJson.mspId, userJson.credentials.certificate, null);
     const userContext = gateway.client.newIdentityContext(user);
 
     // create a new endorsement proposal
     offlineSigningEndorsement = accessControlChannel.channel.newEndorsement('patient-access-control-chaincode');
     const proposalBytes = offlineSigningEndorsement.build(userContext, {
         fcn: 'updateAccessLevelList',
-        args: [address, permission]
+        args: [id, accessLevelList]
     });
 
     // hash the proposal
@@ -348,11 +354,11 @@ router.post('/manage/update_permission/get_endorsement', async function (req, re
     res.send({ data: hashedProposalBytes });
 });
 
-router.post('/manage/update_permission/get_commit', async function (req, res) {
+router.post('/manage/update_access_level_list/get_commit', async function (req, res) {
     // get user's address and signed proposal
-    const address = req.body.address;
+    const id = req.body.id;
     const endorsementSignatureDer = req.body.endorsementSignatureDer;
-    console.log('[APP] address =', address);
+    console.log('[APP] id =', id);
     console.log('[APP] endorsementSignatureDer =', endorsementSignatureDer);
 
     // form endorsor object, and send it
@@ -360,8 +366,8 @@ router.post('/manage/update_permission/get_commit', async function (req, res) {
     const proposalResponse = await offlineSigningEndorsement.send({ targets: accessControlChannel.channel.getEndorsers() });
     console.log('[APP] proposalResponse =', proposalResponse);
 
-    const userJson = await wallet.get(address);
-    const user = FabricCommon.User.createUser(address, null, userJson.mspId, userJson.credentials.certificate, null);
+    const userJson = await wallet.get(id);
+    const user = FabricCommon.User.createUser(id, null, userJson.mspId, userJson.credentials.certificate, null);
     const userContext = gateway.client.newIdentityContext(user);
 
     // create a new commit
@@ -377,7 +383,7 @@ router.post('/manage/update_permission/get_commit', async function (req, res) {
     res.send({ data: hashedCommitBytes });
 });
 
-router.post('/manage/update_permission/send_commit', async function (req, res) {
+router.post('/manage/update_access_level_list/send_commit', async function (req, res) {
     // get user's signed commit
     const commitSignatureDer = req.body.commitSignatureDer;
     console.log('[APP] commitSignature =', commitSignatureDer);
@@ -398,19 +404,14 @@ router.get('/upload', async function (req, res, next) {
     res.render('app_upload');
 });
 
-router.post('/upload', async function (req, res) {
+router.post('/upload/upload_dna_sequences', async function (req, res) {
     // get data owner's id and data
     const id = req.body.id;
     const data = req.body.data;
     console.log('[APP] id =', id);
     console.log('[APP] data =', data);
 
-    // get hashed id
-    const hashedId = crypto.createHash('sha256')
-        .update(id.toString())
-        .digest('hex');
-
-    // separate header part and record part
+    // separate header and records
     const dataLines = data.split(/\n/g);
     const headers = dataLines.filter(function (dataLine) { return dataLine[0] == '#'; });
     const records = dataLines.filter(function (dataLine) { return dataLine[0] != '#'; });
@@ -419,12 +420,12 @@ router.post('/upload', async function (req, res) {
 
     // insert data into database
     db.serialize(function () {
-        db.run('INSERT INTO header VALUES(?,?)', [hashedId, headers.join('\r\n')]);
+        db.run('INSERT INTO header VALUES(?,?)', [id, headers.join('\r\n')]);
         for (const record of records) {
             const items = record.split(/\t/g);
             console.log('[APP] items =', items);
             db.run('INSERT INTO gene VALUES(?,?,?,?,?,?,?,?,?,?)',
-                [hashedId, items[0], items[1], items[2], items[3], items[4], items[5], items[6], items[7], items.slice(8).join('\t')]);
+                [id, items[0], items[1], items[2], items[3], items[4], items[5], items[6], items[7], items.slice(8).join('\t')]);
         }
         console.log('[APP] Finish inserting data to database.');
     });
@@ -432,7 +433,7 @@ router.post('/upload', async function (req, res) {
     res.send({ success: 'ok' });
 });
 
-router.post('/upload_access_ticket', async function (req, res) {
+router.post('/upload/upload_access_ticket', async function (req, res) {
     const id = req.body.id;
     const url = req.body.url;
     const accessTicketList = req.body.accessTicketList;
@@ -455,29 +456,29 @@ router.get('/download', async function (req, res, next) {
     res.render('app_download');
 });
 
-router.post('/download', async function (req, res) {
+router.post('/download/query_access_tickets', async function (req, res) {
     // get user's address, message, signature, chromsome ranges, tags
+    const id = req.body.id;
     const address = req.body.address;
     const message = req.body.message;
     const signature = req.body.signature;
     const chromRanges = req.body.chromRanges;
+    console.log('[APP] id =', id);
     console.log('[APP] address =', address);
     console.log('[APP] message =', message);
     console.log('[APP] signature =', signature);
     console.log('[APP] chromRanges =', chromRanges);
 
     // verify signature with message
-    const web3 = new Web3(DID_CONFIG.URL);
     const recoveredAddress = web3.eth.accounts.recover(message, signature);
     if (recoveredAddress.toLowerCase() != address.toLowerCase()) {
         console.log("Fail to verify the signature.");
         console.log(recoveredAddress, address);
-        res.redirect('/app/register');
         return;
     }
 
     // get research institute's level
-    const getLevelRes = await researchInstituteAccessControlContract.evaluateTransaction('getAccessLevel', address);
+    const getLevelRes = await researchInstituteAccessControlContract.evaluateTransaction('getAccessLevel', id);
     const getLevelResJson = JSON.parse(getLevelRes.toString());
     if (getLevelResJson.error) {
         console.log('[APP] Fail to get level:', getLevelResJson.error);
@@ -487,7 +488,7 @@ router.post('/download', async function (req, res) {
     const level = parseInt(getLevelResJson.data);
     console.log('[APP] level =', level);
 
-    // create a array containing all target chroms
+    // create an array containing all target chroms
     let chroms = [];
     const splittedChromRanges = chromRanges.split(',');
     for (const chromRange of splittedChromRanges) {
@@ -502,71 +503,22 @@ router.post('/download', async function (req, res) {
     // create query
     let query = {
         'selector': {
-            'accessLevelList': {}
+            'accessLevelList': {
+            }
         }
     };
     for (const chrom of chroms) {
         query.selector.accessLevelList[chrom] = { '$lt': level + 1 };
     }
 
-    // query permission from app chain
+    // query access levels from app chain
     const queryResultBuffer = await patientAccessControlContract.evaluateTransaction('queryAccessLevelList', JSON.stringify(query));
     const queryResult = JSON.parse(queryResultBuffer.toString());
     console.log('[APP] queryResult =', queryResult);
     console.log('[APP] queryResult.data =', queryResult.data);
-
-    const identityManagerContract = new web3.eth.Contract(IDENTITY_MANAGER_ABI, DID_CONFIG.CONTRACTS.IDENTITY_MANAGER.ADDRESS);
     for (let i = 0; i < queryResult.data.length; i++) {
-        const userId = await identityManagerContract.methods.getUserId(queryResult.data[i].key)
-            .call({ from: queryResult.data[i].key })
-            .catch(function (error) { console.log(error); });
-        console.log('[APP] userId =', userId);
-
-        queryResult.data[i].key = userId;
         queryResult.data[i].value = queryResult.data[i].value.accessTicketList;
     }
-
-    // // query data from database
-    // const identityManagerContract = new web3.eth.Contract(IDENTITY_MANAGER_ABI, DID_CONFIG.CONTRACTS.IDENTITY_MANAGER.ADDRESS);
-    // for (let i = 0; i < queryResult.data.length; i++) {
-    //     // get user (hashed) id
-    //     const userId = await identityManagerContract.methods.getUserId(queryResult.data[i].key)
-    //         .call({ from: queryResult.data[i].key })
-    //         .catch(function (error) { console.log(error); });
-    //     console.log('[APP] userId =', userId);
-
-    //     queryResult.data[i].key = userId;
-
-    //     // query data of current target user
-    //     const headerObject = await dbAll('SELECT * FROM header WHERE user_id = ?', [userId]);
-    //     const recordObject = await dbAll(`SELECT * FROM gene WHERE user_id = ? AND chrom IN (?${',?'.repeat(chroms.length - 1)})`, [userId].concat(chroms));
-    //     console.log('[APP] headerObject =', headerObject);
-    //     console.log('[APP] recordObject =', recordObject);
-
-    //     // build file text
-    //     queryResult.data[i].value = '';
-    //     for (const header of headerObject) {
-    //         queryResult.data[i].value += header.data;
-    //     }
-    //     queryResult.data[i].value += '\\r\\n';
-    //     for (const record of recordObject) {
-    //         queryResult.data[i].value += record.chrom + '\t'
-    //             + record.pos + '\t'
-    //             + record.id + '\t'
-    //             + record.ref + '\t'
-    //             + record.alt + '\t'
-    //             + record.qual + '\t'
-    //             + record.filter + '\t'
-    //             + record.info + '\t'
-    //             + record.format + '\r\n';
-    //     }
-    //     queryResult.data[i].value = queryResult.data[i].value.replace(/"/g, '\\"')
-    //         .replace(/\r/g, '\\r')
-    //         .replace(/\n/g, '\\n');
-    //     console.log('[APP] queryResult.data[i].value =', queryResult.data[i].value);
-    // }
-
-    // send data back to front end
     res.send({ data: queryResult.data });
 });
 
@@ -602,6 +554,184 @@ router.post('/download/request_dna_sequences', async function (req, res) {
 
     res.send({ id: requesyTicketJson.id, data: data });
 });
+
+router.post('/test/patientAccessControlContract/createUser', async function (req, res) {
+    // console.log(req.body);
+    const address = '123'
+    const createUserResult = await patientAccessControlContract.submitTransaction('createUser', address);
+    const createUserResultJson = JSON.parse(createUserResult.toString());
+    if (createUserResultJson.success) {
+        res.send({ success: 'ok' });
+    }
+    else {
+        res.send({ error: 'error' });
+    }
+});
+
+router.post('/test/patientAccessControlContract/updateAccessLevelList', async function (req, res) {
+    const address = '123';
+    const newAccessLevelList = {
+        chr1: 4, chr2: 4, chr3: 4, chr4: 4, chr5: 4, chr6: 4,
+        chr7: 4, chr8: 4, chr9: 4, chr10: 4, chr11: 4, chr12: 4,
+        chr13: 4, chr14: 4, chr15: 4, chr16: 4, chr17: 4, chr18: 4,
+        chr19: 4, chr20: 4, chr21: 4, chr22: 4, chr23: 4, chr24: 4
+    };
+    const result = await patientAccessControlContract.submitTransaction('updateAccessLevelList', address, JSON.stringify(newAccessLevelList));
+    const resultJson = JSON.parse(result.toString());
+    if (resultJson.success) {
+        res.send({ success: 'ok' });
+    }
+    else {
+        res.send({ error: 'error' });
+    }
+});
+
+router.post('/test/patientAccessControlContract/updateAccessTicketList', async function (req, res) {
+    const address = '123';
+    const newAccessTicketList = { "id": "5f1059ff008c294b854f44e80bf29af7794725e7f798f92a30e82d80c4f0cf62", "chrom": "chr3" };
+    const result = await patientAccessControlContract.submitTransaction('updateAccessTicketList', address, JSON.stringify(newAccessTicketList));
+    const resultJson = JSON.parse(result.toString());
+    if (resultJson.success) {
+        res.send({ success: 'ok' });
+    }
+    else {
+        res.send({ error: 'error' });
+    }
+});
+
+router.post('/test/aaa', async function (req, res) {
+    // init parameters
+    const address = '0x3e014e5c311a7d6f652ca4f8bb016f4338a44118';
+    const newAccessLevelList = JSON.stringify({
+        chr1: 4, chr2: 4, chr3: 4, chr4: 4, chr5: 4, chr6: 4,
+        chr7: 4, chr8: 4, chr9: 4, chr10: 4, chr11: 4, chr12: 4,
+        chr13: 4, chr14: 4, chr15: 4, chr16: 4, chr17: 4, chr18: 4,
+        chr19: 4, chr20: 4, chr21: 4, chr22: 4, chr23: 4, chr24: 4
+    });
+    const key = '-----BEGIN EC PRIVATE KEY-----MHcCAQEEID+jOFFCJ2kFF3OhhGbRoGCXgnzEJZfaDLf6NMSTGGVJoAoGCCqGSM49AwEHoUQDQgAEik+JGYuww68SVFf+UjFG1V4uEAcvmVpZt66+bXH4qD6Icxyekhc8u+5X5STJjT0uWscOldBPIlkeisdt26JAxw==-----END EC PRIVATE KEY-----';
+
+    // get user info from local wallet
+    const userJson = await wallet.get(address);
+    const user = FabricCommon.User.createUser(address, null, userJson.mspId, userJson.credentials.certificate, null);
+    const userContext = gateway.client.newIdentityContext(user);
+
+    // create a new endorsement proposal
+    offlineSigningEndorsement = accessControlChannel.channel.newEndorsement('patient-access-control-chaincode');
+    const proposalBytes = offlineSigningEndorsement.build(userContext, {
+        fcn: 'updateAccessLevelList',
+        args: [address, newAccessLevelList]
+    });
+
+    // hash the proposal
+    const hashedProposalBytes = crypto.createHash('sha256')
+        .update(proposalBytes)
+        .digest('hex');
+
+    // retrieve private key from key file
+    const prvKey = KEYUTIL.getKey(key).prvKeyHex;
+
+    // sign the proposal
+    const ecdsa = new elliptic.ec(elliptic.curves['p256']);
+    const endorsementSignKey = ecdsa.keyFromPrivate(prvKey, 'hex');
+    const endorsementSignature = ecdsa.sign(Buffer.from(hashedProposalBytes, 'hex'), endorsementSignKey, { canonical: true });
+    const endorsementSignatureDer = endorsementSignature.toDER();
+
+    // form endorsor object, and send it
+    offlineSigningEndorsement.sign(Buffer.from(endorsementSignatureDer));
+    const proposalResponse = await offlineSigningEndorsement.send({ targets: accessControlChannel.channel.getEndorsers() });
+    // console.log('[APP] proposalResponse =', proposalResponse);
+
+    // const userJson = await wallet.get(address);
+    // const user = FabricCommon.User.createUser(address, null, userJson.mspId, userJson.credentials.certificate, null);
+    // const userContext = gateway.client.newIdentityContext(user);
+
+    // create a new commit
+    offlineSigningCommit = offlineSigningEndorsement.newCommit();
+    const commitBytes = offlineSigningCommit.build(userContext);
+
+    // hash the commit
+    const hashedCommitBytes = crypto.createHash('sha256')
+        .update(commitBytes)
+        .digest('hex');
+
+    // sign the commit
+    const commitSignature = ecdsa.sign(Buffer.from(hashedCommitBytes, 'hex'), endorsementSignKey, { canonical: true });
+    const commitSignatureDer = commitSignature.toDER();
+
+    // form commiter object, and send it
+    offlineSigningCommit.sign(Buffer.from(commitSignatureDer));
+    const commitResponse = await offlineSigningCommit.send({
+        requestTimeout: 300000,
+        targets: accessControlChannel.channel.getCommitters()
+    });
+
+    res.send({ data: commitResponse });
+});
+
+router.post('/test/bbb', async function (req, res) {
+    // init parameters
+    const address = '0x3e014e5c311a7d6f652ca4f8bb016f4338a44118';
+    const newAccessTicketList = JSON.stringify({ "id": "5f1059ff008c294b854f44e80bf29af7794725e7f798f92a30e82d80c4f0cf62", "chrom": "chr3" });
+    const key = '-----BEGIN EC PRIVATE KEY-----MHcCAQEEID+jOFFCJ2kFF3OhhGbRoGCXgnzEJZfaDLf6NMSTGGVJoAoGCCqGSM49AwEHoUQDQgAEik+JGYuww68SVFf+UjFG1V4uEAcvmVpZt66+bXH4qD6Icxyekhc8u+5X5STJjT0uWscOldBPIlkeisdt26JAxw==-----END EC PRIVATE KEY-----';
+
+    // get user info from local wallet
+    const userJson = await wallet.get(address);
+    const user = FabricCommon.User.createUser(address, null, userJson.mspId, userJson.credentials.certificate, null);
+    const userContext = gateway.client.newIdentityContext(user);
+
+    // create a new endorsement proposal
+    offlineSigningEndorsement = accessControlChannel.channel.newEndorsement('patient-access-control-chaincode');
+    const proposalBytes = offlineSigningEndorsement.build(userContext, {
+        fcn: 'updateAccessTicketList',
+        args: [address, newAccessTicketList]
+    });
+
+    // hash the proposal
+    const hashedProposalBytes = crypto.createHash('sha256')
+        .update(proposalBytes)
+        .digest('hex');
+
+    // retrieve private key from key file
+    const prvKey = KEYUTIL.getKey(key).prvKeyHex;
+
+    // sign the proposal
+    const ecdsa = new elliptic.ec(elliptic.curves['p256']);
+    const endorsementSignKey = ecdsa.keyFromPrivate(prvKey, 'hex');
+    const endorsementSignature = ecdsa.sign(Buffer.from(hashedProposalBytes, 'hex'), endorsementSignKey, { canonical: true });
+    const endorsementSignatureDer = endorsementSignature.toDER();
+
+    // form endorsor object, and send it
+    offlineSigningEndorsement.sign(Buffer.from(endorsementSignatureDer));
+    const proposalResponse = await offlineSigningEndorsement.send({ targets: accessControlChannel.channel.getEndorsers() });
+    // console.log('[APP] proposalResponse =', proposalResponse);
+
+    // const userJson = await wallet.get(address);
+    // const user = FabricCommon.User.createUser(address, null, userJson.mspId, userJson.credentials.certificate, null);
+    // const userContext = gateway.client.newIdentityContext(user);
+
+    // create a new commit
+    offlineSigningCommit = offlineSigningEndorsement.newCommit();
+    const commitBytes = offlineSigningCommit.build(userContext);
+
+    // hash the commit
+    const hashedCommitBytes = crypto.createHash('sha256')
+        .update(commitBytes)
+        .digest('hex');
+
+    // sign the commit
+    const commitSignature = ecdsa.sign(Buffer.from(hashedCommitBytes, 'hex'), endorsementSignKey, { canonical: true });
+    const commitSignatureDer = commitSignature.toDER();
+
+    // form commiter object, and send it
+    offlineSigningCommit.sign(Buffer.from(commitSignatureDer));
+    const commitResponse = await offlineSigningCommit.send({
+        requestTimeout: 300000,
+        targets: accessControlChannel.channel.getCommitters()
+    });
+
+    res.send({ data: commitResponse });
+});
+
 
 module.exports = router;
 

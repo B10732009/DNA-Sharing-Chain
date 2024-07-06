@@ -11,7 +11,7 @@ class PatientAccessControlContract extends Contract {
         // function that will be invoked on chaincode instantiation
     }
 
-    async createUser(ctx, address) {
+    async createUser(ctx, id) {
         const patientAccessControlObject = {
             accessLevelList: {
                 chr1: 4, chr2: 4, chr3: 4, chr4: 4, chr5: 4, chr6: 4,
@@ -19,26 +19,27 @@ class PatientAccessControlContract extends Contract {
                 chr13: 4, chr14: 4, chr15: 4, chr16: 4, chr17: 4, chr18: 4,
                 chr19: 4, chr20: 4, chr21: 4, chr22: 4, chr23: 4, chr24: 4
             },
-            accessTicketList: {}
+            accessTicketList: {
+            }
         };
         const buffer = Buffer.from(JSON.stringify(patientAccessControlObject));
-        await ctx.stub.putState(address, buffer);
+        await ctx.stub.putState(id, buffer);
         return { success: 'ok' };
     }
 
-    async updateAccessLevelList(ctx, address, newAccessLevelList) {
-        const buffer = await ctx.stub.getState(address);
+    async updateAccessLevelList(ctx, id, newAccessLevelList) {
+        const buffer = await ctx.stub.getState(id);
         if (!buffer || !buffer.length) {
             return { error: 'not found' };
         }
         let patientAccessControlObject = JSON.parse(buffer.toString());
         patientAccessControlObject.accessLevelList = JSON.parse(newAccessLevelList);
-        await ctx.stub.putState(address, Buffer.from(JSON.stringify(patientAccessControlObject)));
+        await ctx.stub.putState(id, Buffer.from(JSON.stringify(patientAccessControlObject)));
         return { success: 'ok' };
     }
 
-    async getAccessLevelList(ctx, address) {
-        const buffer = await ctx.stub.getState(address);
+    async getAccessLevelList(ctx, id) {
+        const buffer = await ctx.stub.getState(id);
         if (!buffer || !buffer.length) {
             return { error: 'not found' };
         }
@@ -63,14 +64,14 @@ class PatientAccessControlContract extends Contract {
         return { success: 'ok', data: queryResults };
     }
 
-    async updateAccessTicketList(ctx, address, newAccessTicketList) {
-        const buffer = await ctx.stub.getState(address);
+    async updateAccessTicketList(ctx, id, newAccessTicketList) {
+        const buffer = await ctx.stub.getState(id);
         if (!buffer || !buffer.length) {
             return { error: 'not found' };
         }
         let patientAccessControlObject = JSON.parse(buffer.toString());
         patientAccessControlObject.accessTicketList = JSON.parse(newAccessTicketList);
-        await ctx.stub.putState(address, Buffer.from(JSON.stringify(patientAccessControlObject)));
+        await ctx.stub.putState(id, Buffer.from(JSON.stringify(patientAccessControlObject)));
         return { success: 'ok' };
     }
 
